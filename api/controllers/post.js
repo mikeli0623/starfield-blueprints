@@ -17,6 +17,7 @@ module.exports = {
       videos: req.body.videos,
       username: username,
       shipParts: req.body.shipParts,
+      about: req.body.about,
       userId: {
         id: userId,
         iv: iv,
@@ -62,7 +63,10 @@ module.exports = {
         const updatedPost = await Post.findByIdAndUpdate(
           postId,
           {
-            $set: req.body,
+            $set: {
+              ...req.body,
+              description: req.body.description,
+            },
           },
           { new: true }
         );
@@ -113,7 +117,6 @@ module.exports = {
         post.userId.id.toString(),
         post.userId.iv
       );
-      post.userId.id = encryptedUserId;
       post.userId = { id: encryptedUserId, iv: post.userId.iv };
       res.status(200).json(post);
     } catch (err) {
@@ -220,6 +223,16 @@ module.exports = {
       });
 
       res.status(200).json(featuredPosts);
+    } catch (err) {
+      next(err);
+    }
+  },
+  checkUser: async (req, res, next) => {
+    try {
+      const { user } = req;
+      const post = await Post.findById(req.params.id);
+      if (!post) next(createError(404, "Post does not exist"));
+      res.status(200).json(user.id === post.userId.id);
     } catch (err) {
       next(err);
     }

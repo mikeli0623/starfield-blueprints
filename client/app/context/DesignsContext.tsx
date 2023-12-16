@@ -34,7 +34,7 @@ export const DesignsProvider = ({
   const [likedDesigns, setLikedDesigns] = useState<string[]>([]);
   const [userDesigns, setUserDesigns] = useState<string[]>([]);
 
-  const { res, error, loading, mutate } = useRequest("PATCH");
+  const { mutate } = useRequest("PATCH");
 
   useEffect(() => {
     if (state.user) {

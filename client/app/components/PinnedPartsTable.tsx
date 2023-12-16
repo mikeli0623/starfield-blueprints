@@ -1,229 +1,326 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { Part } from "../util/types";
-import TableHeader from "./TableHeader";
 import Button from "./Button";
 import Image from "next/image";
-import { formatNumberWithCommas } from "../util/util";
 import deleteIcon from "../../public/delete.svg";
+import descIcon from "../../public/descending.svg";
+import ascIcon from "../../public/ascending.svg";
+import {
+  ColumnDef,
+  useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  flexRender,
+  ColumnFiltersState,
+  getSortedRowModel,
+  Row,
+} from "@tanstack/react-table";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { charSort, fuzzyFilter } from "../util/utils";
+
+interface InputProps {
+  partName: string;
+  value: number;
+  parts: { part: Part; amount: number }[];
+  setParts: React.Dispatch<
+    React.SetStateAction<{ part: Part; amount: number }[]>
+  >;
+  handleRemovePart: (partName: string) => void;
+}
+
+const PartAmountInput = ({
+  partName,
+  value,
+  parts,
+  setParts,
+  handleRemovePart,
+}: InputProps) => {
+  const [amount, setAmount] = useState<number>(value);
+
+  return (
+    <input
+      className="input"
+      type="number"
+      max={99}
+      min={0}
+      onBlur={() => {
+        if (amount === 0 || Number.isNaN(amount)) {
+          handleRemovePart(partName);
+        } else {
+          const indexOfObjectToUpdate = parts.findIndex(
+            (part) => part.part.partName === partName
+          );
+
+          const newArray = [...parts];
+          newArray[indexOfObjectToUpdate] = {
+            ...newArray[indexOfObjectToUpdate],
+            amount: amount,
+          };
+
+          setParts(newArray);
+        }
+      }}
+      value={amount}
+      onChange={(e) => setAmount(Math.min(parseInt(e.target.value), 99))}
+    />
+  );
+};
 
 interface Props {
   parts: { part: Part; amount: number }[];
   setParts: React.Dispatch<
     React.SetStateAction<{ part: Part; amount: number }[]>
   >;
+  handleRemovePart: (partName: string) => void;
 }
-const PinnedPartsTable = ({ parts, setParts }: Props) => {
-  const [sortColumn, setSortColumn] = useState<keyof Part | "amount" | null>(
-    null
+
+const PinnedPartsTable = ({ parts, setParts, handleRemovePart }: Props) => {
+  const columns = useMemo<ColumnDef<{ part: Part; amount: number }, any>[]>(
+    () => [
+      {
+        id: "delete",
+        header: () => (
+          <span className="w-full h-full flex justify-center items-center">
+            Delete
+          </span>
+        ),
+        size: 100,
+        cell: ({ row }) => (
+          <span className="w-full h-full flex justify-center items-center">
+            <Button
+              className="btn-square btn-sm btn-outline"
+              handleClick={(e) => {
+                e.preventDefault();
+                handleRemovePart(row.original.part.partName);
+              }}
+            >
+              <Image src={deleteIcon} alt="add" width={20} height={20} />
+            </Button>
+          </span>
+        ),
+      },
+      {
+        accessorKey: "amount",
+        id: "amount",
+        header: () => (
+          <span className="w-full h-full flex justify-center items-center">
+            Amount
+          </span>
+        ),
+        size: 150,
+        sortDescFirst: false,
+        cell: (info) => (
+          <div className="w-full h-full flex justify-center items-center">
+            <PartAmountInput
+              parts={parts}
+              setParts={setParts}
+              partName={info.row.original.part.partName}
+              value={info.getValue()}
+              handleRemovePart={handleRemovePart}
+            />
+          </div>
+        ),
+      },
+      {
+        accessorKey: "part.partName",
+        id: "partName",
+        header: () => (
+          <span className="w-full h-full flex justify-center items-center">
+            Part Name
+          </span>
+        ),
+        size: 450,
+        cell: (info) => (
+          <span className="w-full h-full flex justify-center items-center">
+            {info.getValue()}
+          </span>
+        ),
+        filterFn: "fuzzy",
+        sortDescFirst: false,
+        sortingFn: "alphanumeric",
+      },
+      {
+        accessorKey: "part.moduleType",
+        id: "moduleType",
+        sortDescFirst: false,
+        header: () => (
+          <span className="w-full h-full flex justify-center items-center">
+            Module Type
+          </span>
+        ),
+        size: 250,
+        cell: (info) => (
+          <span className="w-full h-full flex justify-center items-center">
+            {info.getValue()}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "part.unlockLevel",
+        id: "unlockLevel",
+        sortDescFirst: false,
+        header: () => (
+          <span className="w-full h-full flex justify-center items-center">
+            Level
+          </span>
+        ),
+        size: 100,
+        cell: (info) => (
+          <span className="w-full h-full flex justify-center items-center">
+            {info.getValue()}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "part.class",
+        id: "class",
+        sortingFn: charSort,
+        sortDescFirst: false,
+        header: () => (
+          <span className="w-full h-full flex justify-center items-center">
+            Class
+          </span>
+        ),
+        size: 100,
+        cell: (info) => (
+          <span className="w-full h-full flex justify-center items-center">
+            {info.getValue()}
+          </span>
+        ),
+      },
+    ],
+    [handleRemovePart, parts, setParts]
   );
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
-  const handleSort = (column: any) => {
-    if (sortColumn === column) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortColumn(column);
-      setSortOrder("asc");
-    }
-  };
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
-  const handleRemovePart = (
-    e: React.MouseEvent<HTMLButtonElement, MouseEvent>,
-    partName: string
-  ) => {
-    e.preventDefault();
-    setParts(parts.filter((part) => part.part.partName !== partName));
-  };
-
-  const sortFn = useCallback(
-    (a: { part: Part; amount: number }, b: { part: Part; amount: number }) => {
-      if (sortColumn === "amount") {
-        if (sortOrder === "desc") return b.amount - a.amount;
-        else return a.amount - b.amount;
-      }
-
-      const aValue = sortColumn
-        ? sortColumn === "partName"
-          ? a.part[sortColumn]?.toLowerCase()
-          : a.part[sortColumn]
-        : undefined;
-      const bValue = sortColumn
-        ? sortColumn === "partName"
-          ? b.part[sortColumn]?.toLowerCase()
-          : b.part[sortColumn]
-        : undefined;
-
-      if (sortColumn === "skills") {
-        const sortedSkillsA = Object.keys(aValue || {}).sort();
-        const sortedSkillsB = Object.keys(bValue || {}).sort();
-
-        if (sortOrder === "asc") {
-          return sortedSkillsA.join(", ") < sortedSkillsB.join(", ") ? -1 : 1;
-        } else {
-          return sortedSkillsA.join(", ") > sortedSkillsB.join(", ") ? -1 : 1;
-        }
-      }
-
-      if (sortColumn === "class") {
-        // Special sorting for the "class" property
-        const classOrder = ["A", "B", "C", "M"];
-
-        if (sortOrder === "asc") {
-          return (
-            classOrder.indexOf(aValue as string) -
-            classOrder.indexOf(bValue as string)
-          );
-        } else {
-          return (
-            classOrder.indexOf(bValue as string) -
-            classOrder.indexOf(aValue as string)
-          );
-        }
-      }
-
-      // Sorting logic for unpinned parts
-      if (aValue === bValue) {
-        return 0;
-      }
-
-      if (sortOrder === "desc") {
-        return aValue! < bValue! ? -1 : 1;
-      } else {
-        return aValue! > bValue! ? -1 : 1;
-      }
+  const table = useReactTable({
+    data: parts,
+    columns,
+    filterFns: {
+      fuzzy: fuzzyFilter,
     },
-    [sortColumn, sortOrder]
-  );
+    state: {
+      columnFilters,
+    },
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
 
-  const partsArray = useMemo(() => {
-    return [...parts].sort(sortFn);
-  }, [sortFn, parts]);
+  const tableContainerRef = useRef(null);
 
-  const handlePartAmount = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    partName: string
-  ) => {
-    const amount = Math.min(parseInt(e.target.value), 99);
+  const { rows } = table.getRowModel();
 
-    if (amount < 0) return;
-
-    const indexOfObjectToUpdate = parts.findIndex(
-      (part) => part.part.partName === partName
-    );
-
-    const newArray = [...parts];
-    newArray[indexOfObjectToUpdate] = {
-      ...newArray[indexOfObjectToUpdate],
-      amount: amount,
-    };
-
-    setParts(newArray);
-
-    if (amount === 0) {
-      setParts(parts.filter((part) => part.part.partName !== partName));
-    }
-  };
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => tableContainerRef.current,
+    estimateSize: () => 81,
+    overscan: 5,
+  });
 
   return (
-    <div className="h-full w-full flex flex-col">
-      <table className="table table-lg table-pin-rows w-full">
-        <thead>
-          <tr>
-            <th />
-            <TableHeader
-              name="Amount"
-              handleSort={handleSort}
-              order={sortOrder}
-              isSorted={sortColumn === "amount"}
-            />
-            <TableHeader
-              handleSort={handleSort}
-              name="Part Name"
-              order={sortOrder}
-              isSorted={sortColumn === "partName"}
-            />
-            <TableHeader
-              name="Module Type"
-              handleSort={handleSort}
-              order={sortOrder}
-              isSorted={sortColumn === "moduleType"}
-            />
-            <TableHeader
-              handleSort={handleSort}
-              name="Unlock Level"
-              order={sortOrder}
-              isSorted={sortColumn === "unlockLevel"}
-            />
-            <TableHeader
-              handleSort={handleSort}
-              name="Class"
-              order={sortOrder}
-              isSorted={sortColumn === "class"}
-            />
-          </tr>
-        </thead>
-        <tbody>
-          {partsArray.length === 0 ? (
-            <tr>
-              <td className="text-center py-4" colSpan={9}>
-                No parts selected. Select them from the table below.
-              </td>
-            </tr>
-          ) : (
-            partsArray.map((part: { part: Part; amount: number }) => {
-              return (
-                <tr key={part.part.partName}>
-                  <th>
-                    <Button
-                      className="btn-square btn-sm btn-outline"
-                      handleClick={(e) =>
-                        handleRemovePart(e, part.part.partName)
-                      }
-                    >
-                      <Image
-                        src={deleteIcon}
-                        alt="add"
-                        width={20}
-                        height={20}
-                      />
-                    </Button>
-                  </th>
-                  <td>
-                    <input
-                      className="input"
-                      type="number"
-                      max={99}
-                      min={0}
-                      onBlur={() => {
-                        const index = parts.findIndex(
-                          (indexPart) =>
-                            indexPart.part.partName === part.part.partName
-                        );
-                        if (Number.isNaN(parts[index].amount)) {
-                          const clone = [...parts];
-                          clone[index].amount = 1;
-                          setParts(clone);
-                        }
+    <div
+      className="min-h-[100px] max-h-[75vh] w-[1150px] flex flex-col overflow-auto"
+      ref={tableContainerRef}
+    >
+      <div style={{ height: `${virtualizer.getTotalSize()}px` }}>
+        <table>
+          <thead>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map((header) => {
+                  return (
+                    <th
+                      key={header.id}
+                      colSpan={header.colSpan}
+                      style={{
+                        width: header.getSize(),
                       }}
-                      value={parts[
-                        parts.findIndex(
-                          (indexPart) =>
-                            indexPart.part.partName === part.part.partName
-                        )
-                      ].amount.toString()}
-                      onChange={(e) => handlePartAmount(e, part.part.partName)}
-                    />
-                  </td>
-                  <td>{part.part.partName}</td>
-                  <td>{part.part.moduleType}</td>
-                  <td>{part.part.unlockLevel}</td>
-                  <td>{part.part.class || "N/A"}</td>
-                </tr>
-              );
-            })
-          )}
-        </tbody>
-      </table>
+                    >
+                      {header.isPlaceholder ? null : (
+                        <>
+                          <div
+                            {...{
+                              className: header.column.getCanSort()
+                                ? "cursor-pointer select-none flex items-center gap-1"
+                                : "",
+                              onClick: header.column.getToggleSortingHandler(),
+                            }}
+                          >
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                            {{
+                              asc: (
+                                <Image
+                                  src={descIcon}
+                                  width={20}
+                                  height={20}
+                                  alt="descending"
+                                />
+                              ),
+                              desc: (
+                                <Image
+                                  src={ascIcon}
+                                  width={20}
+                                  height={20}
+                                  alt="ascending"
+                                />
+                              ),
+                            }[header.column.getIsSorted() as string] ?? null}
+                          </div>
+                        </>
+                      )}
+                    </th>
+                  );
+                })}
+              </tr>
+            ))}
+          </thead>
+          <tbody>
+            {virtualizer.getVirtualItems().length === 0 ? (
+              <tr>
+                <td className="text-center py-4" colSpan={6}>
+                  No parts selected. Select them from the table below.
+                </td>
+              </tr>
+            ) : (
+              virtualizer.getVirtualItems().map((virtualRow, index) => {
+                const row = rows[virtualRow.index] as Row<{
+                  part: Part;
+                  amount: number;
+                }>;
+                return (
+                  <tr
+                    key={row.id}
+                    className={`hover:bg-gray-500/20`}
+                    style={{
+                      height: `${virtualRow.size}px`,
+                      transform: `translateY(${
+                        virtualRow.start - index * virtualRow.size
+                      }px)`,
+                    }}
+                  >
+                    {row.getVisibleCells().map((cell) => {
+                      return (
+                        <td key={cell.id}>
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

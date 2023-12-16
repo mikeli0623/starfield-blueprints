@@ -42,7 +42,7 @@ const DeleteModal = ({ type, children, item, handleDelete }: Props) => {
           <input
             type="text"
             placeholder={item.name}
-            onChange={(e) => handleInput(e)}
+            onChange={handleInput}
             value={inputValue}
             className="input input-bordered w-full max-w-xs join-item"
           />

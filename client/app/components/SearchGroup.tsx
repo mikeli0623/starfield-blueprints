@@ -1,33 +1,40 @@
 import React from "react";
 import { TagOptions } from "../util/types";
+import DebouncedInput from "./DebouncedInput";
 
 interface Props {
-  handleSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  searchValue: string;
+  handleSearchChange: (value: string | number) => void;
   tagOptions: TagOptions;
   setTagOptions: React.Dispatch<React.SetStateAction<TagOptions>>;
+  time: string;
   setTime: React.Dispatch<React.SetStateAction<string>>;
+  sort: string;
   setSort: React.Dispatch<React.SetStateAction<string>>;
 }
 
 const SearchGroup = ({
+  searchValue,
   handleSearchChange,
+  time,
   setTime,
+  sort,
   setSort,
   tagOptions,
   setTagOptions,
 }: Props) => {
   return (
-    <div className="join">
-      <div>
-        <input
-          className="input input-bordered join-item"
-          placeholder="Search"
-          onChange={handleSearchChange}
-        />
-      </div>
+    <div className="join shadow">
+      <DebouncedInput
+        type="text"
+        className="join-item"
+        placeholder="Search"
+        value={searchValue}
+        onChange={handleSearchChange}
+      />
       <select
-        defaultValue="allTime"
         className="select select-bordered join-item"
+        value={time}
         onChange={(e) => setTime(e.target.value)}
       >
         <option value="allTime">All Time</option>
@@ -37,8 +44,8 @@ const SearchGroup = ({
         <option value="pastYear">Past Year</option>
       </select>
       <select
-        defaultValue="likes"
         className="select select-bordered join-item"
+        value={sort}
         onChange={(e) => setSort(e.target.value)}
       >
         <option value="likes">Most Likes</option>

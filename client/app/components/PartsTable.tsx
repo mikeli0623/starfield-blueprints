@@ -1,144 +1,313 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { Part } from "../util/types";
-import TableHeader from "./TableHeader";
-import Button from "./Button";
+import {
+  flexRender,
+  getCoreRowModel,
+  getSortedRowModel,
+  useReactTable,
+  getFilteredRowModel,
+  ColumnFiltersState,
+  ColumnDef,
+  Row,
+} from "@tanstack/react-table";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { json } from "../util/constants";
+import descIcon from "../../public/descending.svg";
+import ascIcon from "../../public/ascending.svg";
 import Image from "next/image";
-import addIcon from "../../public/add.svg";
+import { fuzzyFilter, otherCharSort } from "../util/utils";
+import IndeterminateCheckbox from "./IndeterminateCheckbox";
+import DebouncedInput from "./DebouncedInput";
 
 interface Props {
-  parts: Part[];
-  setAddedParts: React.Dispatch<
-    React.SetStateAction<{ part: Part; amount: number }[]>
+  rowSelection: {
+    [key: string]: boolean;
+  };
+  setRowSelection: React.Dispatch<
+    React.SetStateAction<{
+      [key: string]: boolean;
+    }>
   >;
+  handleRowSelection: (key: string) => void;
 }
 
-const PartsTable = ({ parts, setAddedParts }: Props) => {
-  const [sortColumn, setSortColumn] = useState<keyof Part | null>(null);
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+const PartsTable = ({
+  rowSelection,
+  setRowSelection,
+  handleRowSelection,
+}: Props) => {
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
-  const handleSort = (column: any) => {
-    if (sortColumn === column) {
-      // If clicking on the same column, toggle the sorting order
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      // If clicking on a different column, set it as the new sorting column
-      setSortColumn(column);
-      setSortOrder("asc");
-    }
-  };
-
-  useEffect(() => {
-    setSortColumn(null);
-    setSortOrder("asc");
-  }, [parts]);
-
-  const handleAddPart = (
-    e: React.MouseEvent<HTMLButtonElement, MouseEvent>,
-    part: Part
-  ) => {
-    e.preventDefault();
-    setAddedParts((prevParts) => {
-      const prevIndex = prevParts.findIndex(
-        (prevPart) => prevPart.part.partName === part.partName
-      );
-      if (prevIndex === -1) {
-        return [...prevParts, { part, amount: 1 }];
-      } else {
-        const prevAmount = prevParts[prevIndex].amount;
-        const clone = [...prevParts];
-        clone[prevIndex] = { ...clone[prevIndex], amount: prevAmount + 1 };
-        return clone;
-      }
-    });
-  };
-
-  const sortFn = useCallback(
-    (a: Part, b: Part) => {
-      const aValue = sortColumn
-        ? sortColumn === "partName"
-          ? a[sortColumn]?.toLowerCase()
-          : a[sortColumn]
-        : undefined;
-      const bValue = sortColumn
-        ? sortColumn === "partName"
-          ? b[sortColumn]?.toLowerCase()
-          : b[sortColumn]
-        : undefined;
-
-      if (sortColumn === "skills") {
-        const sortedSkillsA = Object.keys(aValue || {}).sort();
-        const sortedSkillsB = Object.keys(bValue || {}).sort();
-
-        if (sortOrder === "asc") {
-          return sortedSkillsA.join(", ") < sortedSkillsB.join(", ") ? -1 : 1;
-        } else {
-          return sortedSkillsA.join(", ") > sortedSkillsB.join(", ") ? -1 : 1;
-        }
-      }
-
-      // Sorting logic for unpinned parts
-      if (aValue === bValue) {
-        return 0;
-      }
-
-      if (sortOrder === "asc") {
-        return aValue! < bValue! ? -1 : 1;
-      } else {
-        return aValue! > bValue! ? -1 : 1;
-      }
-    },
-    [sortColumn, sortOrder]
+  const columns = useMemo<ColumnDef<Part, any>[]>(
+    () => [
+      {
+        id: "select",
+        cell: ({ row }) => (
+          <span className="w-full h-full flex justify-center items-center">
+            <IndeterminateCheckbox
+              {...{
+                checked: row.getIsSelected(),
+                disabled: !row.getCanSelect(),
+                indeterminate: row.getIsSomeSelected(),
+                onChange: row.getToggleSelectedHandler(),
+              }}
+            />
+          </span>
+        ),
+      },
+      {
+        accessorKey: "partName",
+        id: "partName",
+        header: () => (
+          <span className="w-full h-full flex justify-center items-center">
+            Part Name
+          </span>
+        ),
+        cell: (info) => (
+          <span className="w-full h-full flex justify-center items-center">
+            {info.getValue()}
+          </span>
+        ),
+        filterFn: "fuzzy",
+        sortingFn: "alphanumeric",
+        sortDescFirst: false,
+      },
+      {
+        accessorKey: "moduleType",
+        sortDescFirst: false,
+        id: "moduleType",
+        header: () => (
+          <span className="w-full h-full flex justify-center items-center">
+            Module Type
+          </span>
+        ),
+        cell: (info) => (
+          <span className="w-full h-full flex justify-center items-center">
+            {info.getValue()}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "class",
+        id: "class",
+        sortDescFirst: false,
+        sortingFn: otherCharSort,
+        header: () => (
+          <span className="w-full h-full flex justify-center items-center">
+            Class
+          </span>
+        ),
+        cell: (info) => (
+          <span className="w-full h-full flex justify-center items-center">
+            {info.getValue()}
+          </span>
+        ),
+      },
+    ],
+    []
   );
 
-  const sortedParts = useMemo(() => {
-    return [...parts].sort(sortFn);
-  }, [sortFn, parts]);
+  const table = useReactTable({
+    columns,
+    data: json.getParts() ?? [],
+    filterFns: {
+      fuzzy: fuzzyFilter,
+    },
+    state: {
+      columnFilters,
+      rowSelection,
+    },
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    onRowSelectionChange: setRowSelection,
+  });
+
+  const { rows } = table.getRowModel();
+
+  const tableContainerRef = useRef(null);
+
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => tableContainerRef.current,
+    estimateSize: () => 50,
+    overscan: 10,
+  });
+
+  const handleModuleType = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const moduleType = e.target.value;
+    if (moduleType === "all") {
+      setColumnFilters(
+        columnFilters.filter((filter) => filter.id !== "moduleType")
+      );
+    } else
+      setColumnFilters([
+        ...columnFilters,
+        { id: "moduleType", value: moduleType },
+      ]);
+  };
+
+  const [search, setSearch] = useState("");
+
+  const handleSearch = (value: string | number) => {
+    const partName = String(value);
+    setSearch(partName);
+    if (partName.length === 0) {
+      setColumnFilters(
+        columnFilters.filter((filter) => filter.id !== "partName")
+      );
+    } else
+      setColumnFilters([...columnFilters, { id: "partName", value: partName }]);
+  };
+
+  const handleClassType = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const classType = e.target.value;
+    if (classType === "all") {
+      setColumnFilters(columnFilters.filter((filter) => filter.id !== "class"));
+    } else
+      setColumnFilters([...columnFilters, { id: "class", value: classType }]);
+  };
 
   return (
-    <table className="table table-sm table-pin-rows">
-      <thead>
-        <tr className="h-[52px]">
-          <th></th>
-          <TableHeader
-            handleSort={handleSort}
-            name="Part Name"
-            order={sortOrder}
-            isSorted={sortColumn === "partName"}
-          />
-          <TableHeader name="Module Type" />
-          <TableHeader name="Class" />
-          <th></th>
-        </tr>
-      </thead>
-      <tbody className={`h-[${52 * sortedParts.length}px]`}>
-        {sortedParts.length > 0 ? (
-          sortedParts.map((part: Part) => {
-            return (
-              <tr key={part.partName} className="h-[52px]">
-                <th>
-                  <Button
-                    className="btn-square btn-sm btn-outline"
-                    handleClick={(e) => handleAddPart(e, part)}
-                  >
-                    <Image src={addIcon} alt="add" width={22} height={22} />
-                  </Button>
-                </th>
-                <td>{part.partName}</td>
-                <td>{part.moduleType}</td>
-                <td>{part.class || "N/A"}</td>
-                <th></th>
-              </tr>
-            );
-          })
-        ) : (
-          <tr>
-            <td colSpan={5} className="text-center">
-              No parts found
-            </td>
-          </tr>
-        )}
-      </tbody>
-    </table>
+    <>
+      <div className="join">
+        <DebouncedInput
+          value={search}
+          onChange={handleSearch}
+          className="join-item"
+          placeholder="Search part name..."
+        />
+        <select
+          defaultValue="all"
+          className="select select-bordered join-item shadow"
+          onChange={handleModuleType}
+        >
+          <option value="all">All</option>
+          <option value="weapons">Weapons</option>
+          <option value="cockpits">Cockpits</option>
+          <option value="engines">Engines</option>
+          <option value="shields">Shields</option>
+          <option value="fuel tanks">Fuel Tanks</option>
+          <option value="grav drives">Grav Drives</option>
+          <option value="bays">Bays</option>
+          <option value="dockers">Dockers</option>
+          <option value="gear">Gear</option>
+          <option value="cargo">Cargo</option>
+          <option value="reactors">Reactors</option>
+          <option value="habs">Habs</option>
+          <option value="structural">Structural</option>
+          <option value="equipment">Equipment</option>
+        </select>
+        <select
+          defaultValue="all"
+          className="select select-bordered join-item shadow"
+          onChange={handleClassType}
+        >
+          <option value="all">All</option>
+          <option value="A">A</option>
+          <option value="B">B</option>
+          <option value="C">C</option>
+        </select>
+      </div>
+
+      <div
+        className="h-[500px] w-[700px] overflow-auto"
+        ref={tableContainerRef}
+      >
+        <div style={{ height: `${virtualizer.getTotalSize()}px` }}>
+          <table className="w-full">
+            <thead>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    return (
+                      <th key={header.id} colSpan={header.colSpan}>
+                        {header.isPlaceholder ? null : (
+                          <>
+                            <div
+                              {...{
+                                className: header.column.getCanSort()
+                                  ? "cursor-pointer select-none flex items-center gap-1"
+                                  : "",
+                                onClick:
+                                  header.column.getToggleSortingHandler(),
+                              }}
+                            >
+                              {flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                              {{
+                                asc: (
+                                  <Image
+                                    src={descIcon}
+                                    width={20}
+                                    height={20}
+                                    alt="descending"
+                                  />
+                                ),
+                                desc: (
+                                  <Image
+                                    src={ascIcon}
+                                    width={20}
+                                    height={20}
+                                    alt="ascending"
+                                  />
+                                ),
+                              }[header.column.getIsSorted() as string] ?? null}
+                            </div>
+                          </>
+                        )}
+                      </th>
+                    );
+                  })}
+                </tr>
+              ))}
+            </thead>
+            <tbody>
+              {virtualizer.getVirtualItems().length === 0 ? (
+                <tr>
+                  <td className="text-center py-4" colSpan={4}>
+                    No parts found.
+                  </td>
+                </tr>
+              ) : (
+                virtualizer.getVirtualItems().map((virtualRow, index) => {
+                  const row = rows[virtualRow.index] as Row<Part>;
+                  return (
+                    <tr
+                      key={row.id}
+                      className={`cursor-pointer hover:bg-gray-500/20 ${
+                        row.id in rowSelection ? "active" : ""
+                      }`}
+                      onClick={() => handleRowSelection(row.id)}
+                      style={{
+                        height: `${virtualRow.size}px`,
+                        transform: `translateY(${
+                          virtualRow.start - index * virtualRow.size
+                        }px)`,
+                      }}
+                    >
+                      {row.getVisibleCells().map((cell) => {
+                        return (
+                          <td key={cell.id}>
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
   );
 };
 

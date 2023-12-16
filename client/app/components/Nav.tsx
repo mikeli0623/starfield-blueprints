@@ -7,6 +7,8 @@ import { useAuth } from "../context/AuthContext";
 import useRequest from "../hooks/useRequest";
 import homeIcon from "../../public/home.svg";
 import userIcon from "../../public/user.svg";
+import collapseClose from "../../public/collapse-close.svg";
+import collapseOpen from "../../public/collapse-open.svg";
 import { useRouter } from "next/navigation";
 
 interface UserState {
@@ -54,10 +56,30 @@ const Nav = () => {
     router.push("/");
   };
 
+  const [hide, setHide] = useState<boolean>(false);
+
   return (
-    <nav className="w-full bg-neutral flex items-center justify-end fixed lg:h-16 z-50 px-4">
+    <nav className="w-full bg-neutral flex items-center justify-end fixed z-50 px-4 py-2">
+      <Button className="btn-circle" handleClick={() => setHide(!hide)}>
+        <label className={`swap swap-rotate ${!hide ? "swap-active" : ""}`}>
+          <Image
+            src={collapseOpen}
+            width={30}
+            height={30}
+            alt="open"
+            className="swap-on"
+          />
+          <Image
+            src={collapseClose}
+            width={30}
+            height={30}
+            alt="close"
+            className="swap-off"
+          />
+        </label>
+      </Button>
       <Link href="/">
-        <Button className="btn-circle btn-base-100">
+        <Button className="btn-circle">
           <Image src={homeIcon} alt="Home" width={30} height={30} />
         </Button>
       </Link>

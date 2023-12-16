@@ -3,6 +3,7 @@ export interface PostResponse {
   createdAt: string;
   likes: number;
   description: string;
+  about: string;
   title: string;
   imageKeys: string[];
   videos: string[];
@@ -53,4 +54,19 @@ export interface Part {
   unlockLevel: number;
   class?: "A" | "B" | "C" | "M";
   skills?: Skills;
+}
+
+export interface PreviewPost {
+  description: string;
+  title: string;
+  about: string;
+  hasMulterImages: boolean;
+  videos: string[];
+  shipParts: { part: Part; amount: number }[];
+  username: string;
+  tags: string[];
+  type: string;
+  id?: string;
+  awsImages?: string[];
+  awsImageOrder?: number[];
 }

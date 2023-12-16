@@ -15,6 +15,7 @@ const decrypt = (id, iv) => {
   const decipher = crypto.createDecipheriv("aes-256-cbc", key, bufferIV);
   let decrypted = decipher.update(id, "hex", "utf-8");
   decrypted += decipher.final("utf-8");
+
   return decrypted;
 };
 

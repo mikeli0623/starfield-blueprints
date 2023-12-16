@@ -9,6 +9,7 @@ const {
   getMultiPosts,
   getFeatured,
   createPost,
+  checkUser,
 } = require("../controllers/post");
 const { verifyToken } = require("../utils/verifyToken");
 
@@ -20,5 +21,6 @@ router.get("/", getPosts);
 router.patch("/like/:id", verifyToken, likePost);
 router.get("/multi", getMultiPosts);
 router.get("/featured", getFeatured);
+router.get("/checkUser/:id", verifyToken, checkUser);
 
 module.exports = router;

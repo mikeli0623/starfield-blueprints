@@ -14,6 +14,8 @@ import toast from "react-hot-toast";
 import { matcher } from "../util/constants";
 import InputPassword from "../components/form/InputPassword";
 
+const MAX_USERNAME_LENGTH = 20;
+
 interface Credentials {
   username: string;
   password: string;
@@ -44,7 +46,9 @@ export default function Register() {
 
     setHasProfanity(matcher.hasMatch(username));
     const sanitizedValue = username.replace(/\s/g, "");
-    setCredentials((prev) => ({ ...prev, username: sanitizedValue }));
+    if (sanitizedValue.length < MAX_USERNAME_LENGTH) {
+      setCredentials((prev) => ({ ...prev, username: sanitizedValue }));
+    }
   };
 
   const handleChangePassword = (e: ChangeEvent<HTMLInputElement>): void => {
@@ -118,13 +122,15 @@ export default function Register() {
             }`}
             required
           />
-          {(hasProfanity || errorText) && (
-            <label className="label">
-              <span className="label-text-alt text-error">
-                {hasProfanity ? "No profanity" : errorText}
-              </span>
-            </label>
-          )}
+
+          <label className="label">
+            <span className="label-text-alt">
+              {credentials.username.length}/{MAX_USERNAME_LENGTH}
+            </span>
+            <span className="label-text-alt text-error">
+              {hasProfanity ? "No profanity" : errorText}
+            </span>
+          </label>
         </div>
         <InputPassword
           type="Password"
@@ -133,6 +139,7 @@ export default function Register() {
         />
         <InputPassword
           type="Retype Password"
+          key={1}
           password={retypedPassword}
           handleChangePassword={handleRetypedPassword}
         />

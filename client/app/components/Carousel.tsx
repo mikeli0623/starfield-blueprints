@@ -6,6 +6,7 @@ import { wrap } from "@popmotion/popcorn";
 import { PostResponse } from "../util/types";
 import { IMG_URL } from "../util/constants";
 import Link from "next/link";
+import Skeleton from "react-loading-skeleton";
 
 interface ButtonProps {
   handleClick: () => void;
@@ -16,7 +17,7 @@ interface ButtonProps {
 const CarouselButton = ({ handleClick, direction, show }: ButtonProps) => {
   return (
     <button
-      className={`btn-accent btn-circle absolute z-10 ${
+      className={`bg-accent btn-circle absolute z-20 ${
         direction === "prev" ? "left-4" : "right-4"
       } top-[50%] -translate-y-[50%] ${
         show ? "opacity-100" : "opacity-0"
@@ -34,8 +35,8 @@ interface CarouselProps {
   size: "md" | "lg";
   hoverProps?: PostResponse[] | undefined;
   preview?: boolean;
-  children: React.ReactNode;
   img_prefix?: string;
+  emptyText?: string;
 }
 
 const HEIGHTS = {
@@ -50,18 +51,15 @@ const Carousel = ({
   size,
   preview = false,
   img_prefix = IMG_URL,
-  children,
 }: CarouselProps) => {
   const sliderVariants = {
     incoming: (direction: number) => ({
       x: direction > 0 ? "100%" : "-100%",
-      scale: 1.2,
       opacity: 0,
     }),
     active: { x: 0, scale: 1, opacity: 1 },
     exit: (direction: number) => ({
       x: direction > 0 ? "-100%" : "100%",
-      scale: 1,
       opacity: 0.2,
     }),
   };
@@ -107,10 +105,10 @@ const Carousel = ({
   );
 
   useEffect(() => {
-    if (!autoplay) return;
-    autoScrollInterval.current = setInterval(() => {
-      swipeToImage(1);
-    }, 5000);
+    // if (!autoplay) return;
+    // autoScrollInterval.current = setInterval(() => {
+    //   swipeToImage(1);
+    // }, 5000);
 
     return () => {
       if (autoScrollInterval.current) clearInterval(autoScrollInterval.current);
@@ -138,7 +136,6 @@ const Carousel = ({
           setShowButtons(false);
         }}
       >
-        {children}
         {preview && (
           <div className="z-40 absolute bottom-0 opacity-0 group-hover:opacity-100 transition duration-300 ease-in-out flex justify-center w-full h-1/5 overflow-x-auto gap-4 bg-gray-600/60 p-4">
             {images.map((image, i) => {
@@ -154,7 +151,8 @@ const Carousel = ({
                     src={img_prefix + image}
                     alt={`Image ${i + 1}`}
                     fill
-                    style={{ objectFit: "contain" }}
+                    style={{ objectFit: "cover" }}
+                    priority
                   />
                 </div>
               );
@@ -224,7 +222,46 @@ const Carousel = ({
         />
       </div>
     );
-  else return <div className={`skeleton lg:w-3/4 w-4/5 ${HEIGHTS[size]}`} />;
+  else {
+    return (
+      <div
+        className={`relative overflow-hidden ${HEIGHTS[size]} lg:w-3/4 w-4/5 flex bg-gray-800 group`}
+      >
+        {preview && (
+          <div className="z-40 absolute bottom-0 opacity-0 group-hover:opacity-100 transition duration-300 ease-in-out flex justify-center w-full h-1/5 overflow-x-auto gap-4 bg-gray-600/60 p-4">
+            {images.map((image, i) => {
+              return (
+                <div
+                  key={image}
+                  className={`relative w-40 h-full transition-colors ${
+                    activeImageIndex === i ? "border-white" : "border-black"
+                  } border-2`}
+                  onClick={() => skipToImage(i)}
+                >
+                  COVER
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <div className="absolute h-full w-full">
+          <Skeleton
+            style={{ position: "absolute", zIndex: 0 }}
+            height={1000}
+            borderRadius={0}
+          />
+          <div className="absolute inset-0 bg-black/30 bg-opacity-60 opacity-0 group-hover:opacity-100 transition duration-300 ease-in-out flex flex-col justify-between">
+            <div className="text-white p-2 flex items-center max-w-[85%]">
+              <Skeleton height="18px" width={300} />
+            </div>
+            <div className="p-4 text-white text-xs md:text-sm h-1/3 flex flex-col-reverse w-1/2 self-center">
+              <Skeleton count={4} />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 };
 
 export default Carousel;

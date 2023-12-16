@@ -1,193 +1,349 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import TableHeader from "./TableHeader";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Part } from "../util/types";
-import { formatNumberWithCommas } from "../util/util";
+import {
+  formatNumberWithCommas,
+  fuzzyFilter,
+  dumbSort,
+  charSort,
+} from "../util/utils";
 import { json } from "../util/constants";
-import useOnScreen from "../hooks/useOnScreen";
+import {
+  ColumnDef,
+  useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  flexRender,
+  ColumnFiltersState,
+  getSortedRowModel,
+  Row,
+} from "@tanstack/react-table";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import Image from "next/image";
+import descIcon from "../../public/descending.svg";
+import ascIcon from "../../public/ascending.svg";
+import IndeterminateCheckbox from "./IndeterminateCheckbox";
 
 interface Props {
   parts: { partName: string; amount: number }[];
 }
 
 const FinalPartsTable = ({ parts }: Props) => {
-  const [sortColumn, setSortColumn] = useState<keyof Part | "amount" | null>(
-    null
-  );
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-  const handleSort = (column: any) => {
-    if (sortColumn === column) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortColumn(column);
-      setSortOrder("asc");
-    }
-  };
+  const [data, setData] = useState<{ part: Part; amount: number }[]>([]);
 
-  const sortFn = useCallback(
-    (a: { part: Part; amount: number }, b: { part: Part; amount: number }) => {
-      if (sortColumn === "amount") {
-        if (sortOrder === "desc") return b.amount - a.amount;
-        else return a.amount - b.amount;
-      }
-
-      const aValue = sortColumn
-        ? sortColumn === "partName"
-          ? a.part[sortColumn]?.toLowerCase()
-          : a.part[sortColumn]
-        : undefined;
-      const bValue = sortColumn
-        ? sortColumn === "partName"
-          ? b.part[sortColumn]?.toLowerCase()
-          : b.part[sortColumn]
-        : undefined;
-
-      if (sortColumn === "skills") {
-        const sortedSkillsA = Object.keys(aValue || {}).sort();
-        const sortedSkillsB = Object.keys(bValue || {}).sort();
-
-        if (sortOrder === "asc") {
-          return sortedSkillsA.join(", ") < sortedSkillsB.join(", ") ? -1 : 1;
-        } else {
-          return sortedSkillsA.join(", ") > sortedSkillsB.join(", ") ? -1 : 1;
-        }
-      }
-
-      // Sorting logic for unpinned parts
-      if (aValue === bValue) {
-        return 0;
-      }
-
-      if (sortOrder === "desc") {
-        return aValue! < bValue! ? -1 : 1;
-      } else {
-        return aValue! > bValue! ? -1 : 1;
-      }
-    },
-    [sortColumn, sortOrder]
-  );
-
-  const partsArray = useMemo(() => {
-    return parts
-      .map((part) => {
+  useEffect(() => {
+    setData(
+      parts.map((part) => {
         return { part: json.getPart(part.partName), amount: part.amount };
       })
-      .sort(sortFn);
-  }, [sortFn, parts]);
+    );
+  }, [parts]);
+
+  const [obtainedRows, setObtainedRows] = useState<{ [key: string]: boolean }>(
+    {}
+  );
+
+  const columns = useMemo<ColumnDef<{ part: Part; amount: number }, any>[]>(
+    () => [
+      {
+        id: "obtained",
+        header: () => (
+          <span className="w-full h-full flex justify-center items-center">
+            Obtained
+          </span>
+        ),
+        size: 100,
+        cell: ({ row }) => (
+          <span className="w-full h-full flex justify-center items-center">
+            <IndeterminateCheckbox
+              {...{
+                checked: row.getIsSelected(),
+                disabled: !row.getCanSelect(),
+                indeterminate: row.getIsSomeSelected(),
+                onChange: row.getToggleSelectedHandler(),
+              }}
+            />
+          </span>
+        ),
+      },
+      {
+        accessorKey: "amount",
+        id: "amount",
+        sortDescFirst: false,
+        header: () => (
+          <span className="w-full h-full flex justify-center items-center">
+            Amount
+          </span>
+        ),
+        cell: (info) => (
+          <span className="w-full h-full flex justify-center items-center">
+            {info.getValue()}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "part.partName",
+        id: "partName",
+        sortDescFirst: false,
+        header: () => (
+          <span className="w-full h-full flex justify-center items-center">
+            Part Name
+          </span>
+        ),
+        cell: (info) => (
+          <span className="w-full h-full flex justify-center items-center">
+            {info.getValue()}
+          </span>
+        ),
+        filterFn: "fuzzy",
+        sortingFn: "alphanumeric",
+        size: 450,
+      },
+      {
+        accessorKey: "part.moduleType",
+        id: "moduleType",
+        sortDescFirst: false,
+        sortingFn: "textCaseSensitive",
+        header: () => (
+          <span className="w-full h-full flex justify-center items-center">
+            Module Type
+          </span>
+        ),
+        cell: (info) => (
+          <span className="w-full h-full flex justify-center items-center">
+            {info.getValue()}
+          </span>
+        ),
+        size: 200,
+      },
+      {
+        accessorKey: "part.unlockLevel",
+        id: "unlockLevel",
+        sortDescFirst: false,
+        header: () => (
+          <span className="w-full h-full flex justify-center items-center">
+            Level
+          </span>
+        ),
+        cell: (info) => (
+          <span className="w-full h-full flex justify-center items-center">
+            {info.getValue()}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "part.class",
+        id: "class",
+        sortingFn: charSort,
+        sortDescFirst: false,
+        header: () => (
+          <span className="w-full h-full flex justify-center items-center">
+            Class
+          </span>
+        ),
+        cell: (info) => (
+          <span className="w-full h-full flex justify-center items-center">
+            {info.getValue()}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "part.skills",
+        id: "skills",
+        sortingFn: dumbSort,
+        sortDescFirst: false,
+        header: () => (
+          <span className="w-full h-full flex justify-center items-center">
+            Skills
+          </span>
+        ),
+        size: 300,
+        cell: (info) => {
+          const skills = info.getValue();
+          const entries = Object.entries(skills);
+          return (
+            <span className="w-full h-full flex justify-center items-center">
+              {entries.length === 0 ? (
+                "N/A"
+              ) : (
+                <ul className="list-disc">
+                  {entries.map(([skill, value]) => (
+                    <li key={skill}>{`${skill}: ${value}`}</li>
+                  ))}
+                </ul>
+              )}
+            </span>
+          );
+        },
+      },
+      {
+        accessorKey: "part.cost",
+        id: "cost",
+        sortDescFirst: false,
+        header: () => (
+          <span className="w-full h-full flex justify-center items-center">
+            Cost
+          </span>
+        ),
+        size: 100,
+        cell: (info) => (
+          <span className="w-full h-full flex justify-center items-center">
+            {formatNumberWithCommas(info.getValue())}
+          </span>
+        ),
+      },
+    ],
+    []
+  );
+
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+
+  const table = useReactTable({
+    data,
+    columns,
+    filterFns: {
+      fuzzy: fuzzyFilter,
+    },
+    state: {
+      columnFilters,
+      rowSelection: obtainedRows,
+    },
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    onRowSelectionChange: setObtainedRows,
+  });
+
+  const tableContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const { rows } = table.getRowModel();
+
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => tableContainerRef.current,
+    estimateSize: () => 70,
+    overscan: 5,
+  });
 
   return (
-    <table className="table table-lg w-full">
-      <thead>
-        <tr>
-          <th />
-          <TableHeader
-            name="Amount"
-            handleSort={handleSort}
-            order={sortOrder}
-            isSorted={sortColumn === "amount"}
-          />
-          <TableHeader
-            handleSort={handleSort}
-            name="Part Name"
-            order={sortOrder}
-            isSorted={sortColumn === "partName"}
-          />
-          <TableHeader
-            name="Module Type"
-            handleSort={handleSort}
-            order={sortOrder}
-            isSorted={sortColumn === "moduleType"}
-          />
-          <TableHeader
-            handleSort={handleSort}
-            name="Unlock Level"
-            order={sortOrder}
-            isSorted={sortColumn === "unlockLevel"}
-          />
-          <TableHeader
-            handleSort={handleSort}
-            name="Class"
-            order={sortOrder}
-            isSorted={sortColumn === "class"}
-          />
-          <TableHeader
-            handleSort={handleSort}
-            name="Skills"
-            order={sortOrder}
-            isSorted={sortColumn === "skills"}
-          />
-          <TableHeader
-            handleSort={handleSort}
-            name="Cost"
-            order={sortOrder}
-            isSorted={sortColumn === "cost"}
-          />
-        </tr>
-      </thead>
-      <tbody>
-        {partsArray.length === 0 ? (
-          <tr>
-            <td className="text-center py-4" colSpan={9}>
-              No parts
-            </td>
-          </tr>
-        ) : (
-          partsArray.map((part: { part: Part; amount: number }) => {
-            return (
-              <tr key={part.part.partName}>
-                <th />
-                <td className="">
-                  {
-                    parts[
-                      partsArray.findIndex(
-                        (indexPart) =>
-                          indexPart.part.partName === part.part.partName
-                      )
-                    ].amount
-                  }
-                </td>
-                <td>{part.part.partName}</td>
-                <td>{part.part.moduleType}</td>
-                <td>{part.part.unlockLevel}</td>
-                <td>{part.part.class || "N/A"}</td>
-                <td>
-                  {part.part.skills ? (
-                    <ul className="list-disc pl-4">
-                      {Object.entries(part.part.skills).map(
-                        ([skill, value]) => (
-                          <li key={skill}>{`${skill}: ${value}`}</li>
-                        )
-                      )}
-                    </ul>
-                  ) : (
-                    "N/A"
-                  )}
-                </td>
-                <td>{formatNumberWithCommas(part.part.cost)}</td>
-              </tr>
-            );
-          })
+    <div className="flex flex-col items-center w-4/5 gap-2">
+      <div
+        className={`max-h-[70vh] overflow-auto`}
+        style={{ height: `${rows.length * 90}px` }}
+        ref={tableContainerRef}
+      >
+        <div
+          style={{
+            height: `${virtualizer.getTotalSize()}px`,
+          }}
+        >
+          <table>
+            <thead>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    return (
+                      <th
+                        key={header.id}
+                        colSpan={header.colSpan}
+                        style={{
+                          width: header.getSize(),
+                        }}
+                      >
+                        {header.isPlaceholder ? null : (
+                          <>
+                            <div
+                              {...{
+                                className: header.column.getCanSort()
+                                  ? "cursor-pointer select-none flex items-center gap-1"
+                                  : "",
+                                onClick:
+                                  header.column.getToggleSortingHandler(),
+                              }}
+                            >
+                              {flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                              {{
+                                asc: (
+                                  <Image
+                                    src={ascIcon}
+                                    width={20}
+                                    height={20}
+                                    alt="ascending"
+                                  />
+                                ),
+                                desc: (
+                                  <Image
+                                    src={descIcon}
+                                    width={20}
+                                    height={20}
+                                    alt="descending"
+                                  />
+                                ),
+                              }[header.column.getIsSorted() as string] ?? null}
+                            </div>
+                          </>
+                        )}
+                      </th>
+                    );
+                  })}
+                </tr>
+              ))}
+            </thead>
+            <tbody>
+              {virtualizer.getVirtualItems().length === 0 ? (
+                <tr>
+                  <td className="text-center py-4" colSpan={8}>
+                    No parts
+                  </td>
+                </tr>
+              ) : (
+                virtualizer.getVirtualItems().map((virtualRow, index) => {
+                  const row = rows[virtualRow.index] as Row<{
+                    part: Part;
+                    amount: number;
+                  }>;
+                  return (
+                    <tr
+                      data-index={virtualRow.key}
+                      key={row.id}
+                      className={`hover:bg-gray-500/20`}
+                      style={{
+                        height: `${virtualRow.size}px`,
+                        transform: `translateY(${
+                          virtualRow.start - index * virtualRow.size
+                        }px)`,
+                      }}
+                    >
+                      {row.getVisibleCells().map((cell) => {
+                        return (
+                          <td key={cell.id}>
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div className="self-end font-bold">
+        Total Cost:{" "}
+        {formatNumberWithCommas(
+          data
+            .map((part) => part.part.cost * part.amount)
+            .reduce((sum, cost) => (sum += cost), 0)
         )}
-      </tbody>
-      <tfoot>
-        <tr>
-          <td colSpan={6}></td>
-          <td>Total Cost:</td>
-          <td>
-            {formatNumberWithCommas(
-              partsArray
-                .map((part) => part.part.cost * part.amount)
-                .reduce((sum, cost) => (sum += cost), 0)
-            )}
-          </td>
-        </tr>
-      </tfoot>
-    </table>
+      </div>
+    </div>
   );
 };
 

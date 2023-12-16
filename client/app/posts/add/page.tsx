@@ -6,7 +6,7 @@ import Image from "next/image";
 import { AnimatePresence, Reorder, motion } from "framer-motion";
 import ImagePreview from "../components/ImagePreview";
 import toast from "react-hot-toast";
-import { Part, PostResponse, TagOptions } from "@/app/util/types";
+import { Part, PostResponse, PreviewPost, TagOptions } from "@/app/util/types";
 import { useRouter } from "next/navigation";
 import Button from "@/app/components/Button";
 import FullImagePreview from "@/app/components/FullImagePreview";
@@ -16,26 +16,98 @@ import expandIcon from "../../../public/expand.svg";
 import deleteIcon from "../../../public/delete.svg";
 import { useDropzone } from "react-dropzone";
 import { useDesigns } from "@/app/context/DesignsContext";
-import { API_URL, matcher } from "@/app/util/constants";
+import {
+  API_URL,
+  MAX_ABOUT_LENGTH,
+  MAX_DESCRIPTION_LENGTH,
+  MAX_IMAGES,
+  MAX_TITLE_LENGTH,
+  matcher,
+  validImageTypes,
+} from "@/app/util/constants";
 import closeIcon from "../../../public/close.svg";
 import InputImage from "@/app/components/form/InputImage";
 import Parts from "@/app/components/Parts";
 import { useAuth } from "@/app/context/AuthContext";
-
-const validImageTypes = ["image/png", "image/jpg", "image/jpeg", "image/webp"];
-const MAX_DESCRIPTION_LENGTH = 300;
-const MAX_TITLE_LENGTH = 50;
-const MAX_IMAGES = 5;
+import { formatNumberWithCommas, sanitizeHTML } from "@/app/util/utils";
+import SubNav from "@/app/components/SubNav";
+import useProtected from "@/app/hooks/useProtected";
+import Editor from "@/app/components/editor/Editor";
+import { useEditor } from "@tiptap/react";
+import TextAlign from "@tiptap/extension-text-align";
+import Link from "@tiptap/extension-link";
+import StarterKit from "@tiptap/starter-kit";
+import CharacterCount from "@tiptap/extension-character-count";
+import Placeholder from "@tiptap/extension-placeholder";
+import Underline from "@tiptap/extension-underline";
+import Paragraph from "@tiptap/extension-paragraph";
+import LinkModal from "@/app/components/editor/LinkModal";
+import { Image as TippyImage } from "@tiptap/extension-image";
+import { ImageModal } from "@/app/components/editor/ImageModal";
 
 interface UploadedImage {
   url: string;
   file: File | null;
 }
 
-export default function Page() {
+export default function AddDesign() {
   const [error, setError] = useState<string>("");
 
+  useProtected();
+
   const { state } = useAuth();
+
+  const editor = useEditor({
+    onUpdate: () => {
+      setDescProfanity(matcher.hasMatch(editor?.getText()));
+    },
+    extensions: [
+      TippyImage.configure({
+        inline: true,
+      }),
+      Underline,
+      StarterKit.configure({
+        code: false,
+        codeBlock: false,
+        paragraph: false,
+        bulletList: {
+          keepMarks: true,
+          keepAttributes: false,
+        },
+        orderedList: {
+          keepMarks: true,
+          keepAttributes: false,
+        },
+      }),
+      Paragraph.extend({
+        addKeyboardShortcuts() {
+          return {
+            Tab: () => {
+              this.editor.chain().sinkListItem("listItem").run();
+
+              return true; // <- make sure to return true to prevent the tab from blurring.
+            },
+          };
+        },
+      }),
+      TextAlign.configure({
+        types: ["heading", "paragraph"],
+      }),
+      Link.extend({
+        inclusive: false,
+      }).configure({
+        protocols: ["ftp", "mailto"],
+        openOnClick: false,
+      }),
+      CharacterCount.configure({
+        limit: MAX_DESCRIPTION_LENGTH,
+      }),
+      Placeholder.configure({
+        emptyEditorClass: "is-editor-empty",
+        placeholder: "Enter a description",
+      }),
+    ],
+  });
 
   const {
     res: postRes,
@@ -195,7 +267,7 @@ export default function Page() {
   const handleClosePreview = () => setShowPreview(false);
 
   const [title, setTitle] = useState<string>("");
-  const [description, setDescription] = useState<string>("");
+  const [about, setAbout] = useState<string>("");
   const [youtubeLinks, setYoutubeLinks] = useState<string[]>([]);
   const [youtubeLinkInput, setYoutubeLinkInput] = useState<string>("");
   const [addedParts, setAddedParts] = useState<
@@ -246,33 +318,36 @@ export default function Page() {
   );
 
   useEffect(() => {
-    if (sessionStorage.getItem("previewPost") !== null && state && state.user) {
-      const post: {
-        description: string;
-        title: string;
-        hasImages: boolean;
-        videos: string[];
-        shipParts: { part: Part; amount: number }[];
-        username: string;
-        tags: string[];
-      } = JSON.parse(sessionStorage.getItem("previewPost")!);
-      setTitle(post.title);
-      setDescription(post.description);
-      setYoutubeLinks(post.videos);
-      setAddedParts(post.shipParts);
+    if (
+      sessionStorage.getItem("previewPost") !== null &&
+      state &&
+      state.user &&
+      editor
+    ) {
+      const previewPost: PreviewPost = JSON.parse(
+        sessionStorage.getItem("previewPost")!
+      );
+      if (previewPost.type !== "add") {
+        sessionStorage.removeItem("previewPost");
+        return;
+      }
+      setTitle(previewPost.title);
+      setAbout(previewPost.about);
+      editor.commands.setContent(previewPost.description);
+      setYoutubeLinks(previewPost.videos);
+      setAddedParts(previewPost.shipParts);
       const newTags = {
-        unmodded: post.tags.includes("unmodded"),
-        modded: post.tags.includes("modded"),
-        glitched: post.tags.includes("glitched"),
+        unmodded: previewPost.tags.includes("unmodded"),
+        modded: previewPost.tags.includes("modded"),
+        glitched: previewPost.tags.includes("glitched"),
       };
       setTags(newTags);
-      setAddedParts(post.shipParts);
-      if (post.hasImages)
+      setAddedParts(previewPost.shipParts);
+      if (previewPost.hasMulterImages)
         getTempImages("", `/images/temp/${state.user.userId}`);
-      sessionStorage.removeItem("previewPost");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state]);
+  }, [state, editor]);
 
   useEffect(() => {
     if (tempImagesRes && !tempImagesError) {
@@ -281,6 +356,7 @@ export default function Page() {
   }, [tempImagesRes, tempImagesError, fetchAndCreateFiles]);
 
   const [titleProfanity, setTitleProfanity] = useState<boolean>(false);
+  const [aboutProfanity, setAboutProfanity] = useState<boolean>(false);
   const [descProfanity, setDescProfanity] = useState<boolean>(false);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -291,13 +367,11 @@ export default function Page() {
     }
   };
 
-  const handleDescriptionChange = (
-    e: React.ChangeEvent<HTMLTextAreaElement>
-  ) => {
+  const handleAboutChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const inputText = e.target.value;
-    setDescProfanity(matcher.hasMatch(inputText));
-    if (inputText.length <= MAX_DESCRIPTION_LENGTH) {
-      setDescription(inputText);
+    setAboutProfanity(matcher.hasMatch(inputText));
+    if (inputText.length <= MAX_ABOUT_LENGTH) {
+      setAbout(inputText);
     }
   };
 
@@ -334,6 +408,12 @@ export default function Page() {
 
   const toastRef = useRef<string>();
 
+  const calcLengthDesc = () => {
+    const textLen = editor?.getText().trim().length ?? 0;
+    const numImages = (editor?.getHTML().split(`<img src="`) || []).length - 1;
+    return textLen + numImages;
+  };
+
   const handleSubmit = async (e: React.ChangeEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -342,7 +422,7 @@ export default function Page() {
       return;
     }
 
-    if (titleProfanity || descProfanity) return;
+    if (titleProfanity || descProfanity || aboutProfanity) return;
 
     const tagsField: string[] = Object.keys(tags).filter(
       (tag) => tags[tag as keyof TagOptions]
@@ -358,7 +438,9 @@ export default function Page() {
 
     const postData = {
       title,
-      description,
+      about,
+      description:
+        calcLengthDesc() === 0 ? "" : sanitizeHTML(editor?.getHTML() || ""),
       tags: tagsField,
       videos,
       shipParts,
@@ -404,6 +486,22 @@ export default function Page() {
   }, [updateError]);
 
   useEffect(() => {
+    if (uploadError) {
+      toast.error(uploadError, {
+        id: toastRef.current,
+      });
+    }
+  }, [uploadError]);
+
+  useEffect(() => {
+    if (imageError) {
+      toast.error(imageError, {
+        id: toastRef.current,
+      });
+    }
+  }, [imageError]);
+
+  useEffect(() => {
     if (!updating && updateRes) {
       toast.success("Design uploaded!", {
         id: toastRef.current,
@@ -442,26 +540,36 @@ export default function Page() {
     e: React.MouseEvent<HTMLButtonElement, MouseEvent>
   ) => {
     e.preventDefault();
+
     const tagsArray = Object.keys(tags).filter(
       (tag) => tags[tag as keyof TagOptions]
     );
+
     const post = {
-      title: title,
-      description: description,
+      title,
+      about,
+      description:
+        calcLengthDesc() === 0 ? "" : sanitizeHTML(editor?.getHTML() || ""),
       videos: youtubeLinks,
       username: state.user?.username,
       tags: tagsArray,
       shipParts: addedParts,
-      hasImages: images.length > 0,
+      hasMulterImages: images.length > 0,
+      type: "add",
     };
-    const imageForm = new FormData();
-    images.forEach((image, index) => {
-      if (image.file) {
-        imageForm.append(`images[${index}]`, image.file);
-      }
-    });
-    uploadTempImage(imageForm);
     sessionStorage.setItem("previewPost", JSON.stringify(post));
+
+    // uploads images through multer for preview
+    if (images.length > 0) {
+      const imageForm = new FormData();
+      images.forEach((image, index) => {
+        if (image.file) {
+          imageForm.append(`images[${index}]`, image.file);
+        }
+      });
+      uploadTempImage(imageForm);
+    }
+
     router.push("/posts/preview");
   };
 
@@ -475,9 +583,43 @@ export default function Page() {
 
   return (
     <main
-      className="flex min-h-screen flex-col items-center p-24 gap-4"
+      className="flex min-h-screen flex-col items-center p-24 gap-4 outline-none"
       {...getRootProps()}
     >
+      <ImageModal editor={editor} />
+      <LinkModal editor={editor} />
+      <SubNav>
+        <div></div>
+        <div className="flex gap-2 items-center justify-center">
+          <Button handleClick={() => router.push("#title")} className="m-auto">
+            Title
+          </Button>
+          <Button handleClick={() => router.push("#about")} className="m-auto">
+            About
+          </Button>
+          <Button
+            handleClick={() => router.push("#description")}
+            className="m-auto"
+          >
+            Description
+          </Button>
+          <Button handleClick={() => router.push("#parts")} className="m-auto">
+            Parts
+          </Button>
+          <Button handleClick={() => router.push("#images")} className="m-auto">
+            Images
+          </Button>
+          <Button handleClick={() => router.push("#videos")} className="m-auto">
+            Videos
+          </Button>
+        </div>
+        <Button
+          className="join-item btn-neutral text-white font-bold py-2 px-4 m-auto"
+          handleClick={handlePreview}
+        >
+          Preview
+        </Button>
+      </SubNav>
       <input {...getInputProps()} />
       <AnimatePresence>
         {showPreview && (
@@ -502,18 +644,18 @@ export default function Page() {
         onSubmit={handleSubmit}
         className="flex flex-col items-center w-full gap-4"
       >
-        <div className="form-control w-full max-w-xs">
-          <label className="label font-medium text-gray-600">
+        <div className="form-control lg:w-1/3 md:w-1/2 w-full">
+          <label className="label font-medium text-gray-600" id="title">
             <span className="label-text text-lg">Title</span>
           </label>
           <input
             type="text"
-            className={`input input-bordered w-full ${
-              titleProfanity ? "input-error" : ""
-            }`}
-            placeholder="Enter title"
             value={title}
             onChange={handleTitleChange}
+            className={`bg-white input input-bordered shadow w-full ${
+              titleProfanity ? "input-error" : ""
+            }`}
+            placeholder="Enter a title"
             required
           />
           <label className="label text-sm text-gray-500">
@@ -527,13 +669,37 @@ export default function Page() {
             )}
           </label>
         </div>
-        <div className="form-control w-full">
-          <div className="join w-full flex items-center justify-center ">
+        <div className="form-control lg:w-2/3 md:w-4/5 w-full">
+          <label className="label font-medium text-gray-600" id="about">
+            <span className="label-text text-lg">About this Design</span>
+          </label>
+          <textarea
+            value={about}
+            onChange={handleAboutChange}
+            className={`textarea textarea-bordered bg-white shadow w-full ${
+              aboutProfanity ? "textarea-error" : ""
+            }`}
+            placeholder="This ship is awesome!"
+            required
+          />
+          <label className="label text-sm text-gray-500">
+            <span className="label-text-alt">
+              {about.length}/{MAX_ABOUT_LENGTH}
+            </span>
+            {aboutProfanity && (
+              <span className="label-text-alt text-error">
+                Profanity detected
+              </span>
+            )}
+          </label>
+        </div>
+        <div className="form-control w-full" id="tags">
+          <div className="join w-full flex items-center justify-center">
             {Object.entries(tags).map((tag) => {
               const tagName = tag[0];
               const val = tag[1];
               return (
-                <div className="join-item bg-white px-2" key={tagName}>
+                <div className="join-item bg-white px-2 shadow" key={tagName}>
                   <label className="label cursor-pointer h-full w-full gap-2">
                     <span className="label-text">
                       {tagName.charAt(0).toUpperCase() + tagName.slice(1)}
@@ -563,23 +729,17 @@ export default function Page() {
             })}
           </div>
         </div>
-        <div className="form-control w-1/2">
-          <label className="label font-medium text-gray-600">
+        <div className="form-control lg:w-2/3 md:w-4/5 w-full">
+          <label className="label font-medium text-gray-600" id="description">
             <span className="label-text text-lg">Description</span>
           </label>
-          <textarea
-            className={`textarea textarea-bordered h-32 p-2 w-full text-lg ${
-              descProfanity ? "textarea-error" : ""
-            }`}
-            placeholder="Enter description"
-            value={description}
-            onChange={handleDescriptionChange}
-            maxLength={MAX_DESCRIPTION_LENGTH}
-            required
-          />
+          <Editor editor={editor} error={descProfanity} />
           <label className="label text-sm text-gray-500">
             <span className="label-text-alt">
-              {description.length}/{MAX_DESCRIPTION_LENGTH}
+              {formatNumberWithCommas(
+                editor?.storage.characterCount.characters() ?? 0
+              )}
+              /{formatNumberWithCommas(MAX_DESCRIPTION_LENGTH)}
             </span>
             {descProfanity && (
               <span className="label-text-alt text-error">
@@ -588,17 +748,20 @@ export default function Page() {
             )}
           </label>
         </div>
-        <div className="form-control w-2/3 flex flex-col items-center gap-2">
-          <h2 className="text-2xl">Ship Parts</h2>
+        <div className="form-control lg:w-2/3 md:w-4/5 w-full flex flex-col items-center gap-2">
+          <h2 className="text-2xl" id="parts">
+            Ship Parts
+          </h2>
           <Parts addedParts={addedParts} setAddedParts={setAddedParts} />
         </div>
         <div className="form-control w-full flex flex-col items-center gap-2">
-          <h2 className="text-2xl">Images</h2>
+          <h2 className="text-2xl" id="images">
+            Images
+          </h2>
           <p>
             Upload up to 5 images to show off your design. Images must be less
             than 5 MB. Must upload at least 1 image. Drag to reorder images.
           </p>
-          {uploadError && <ErrorText text={uploadError} />}
           {error && <ErrorText text={error} />}
           {imageError && <ErrorText text={imageError} />}
           <InputImage
@@ -664,16 +827,18 @@ export default function Page() {
           </Reorder.Group>
         </div>
         <div className="form-control w-full flex flex-col items-center gap-2">
-          <h2 className="text-2xl">Videos</h2>
+          <h2 className="text-2xl" id="videos">
+            Videos
+          </h2>
           <p>Link up to 12 YouTube videos to show off your design.</p>
           {linkError && <ErrorText text={linkError} />}
           <div>
             <label className="block text-sm font-medium text-gray-600">
               YouTube Links
             </label>
-            <div className="join">
+            <div className="join shadow">
               <input
-                className="join-item input input-bordered"
+                className="join-item input input-bordered bg-white"
                 placeholder="Enter YouTube link"
                 value={youtubeLinkInput}
                 onChange={(e) => setYoutubeLinkInput(e.target.value)}

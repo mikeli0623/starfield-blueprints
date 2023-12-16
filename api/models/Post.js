@@ -10,6 +10,9 @@ const PostSchema = Schema({
   description: {
     type: String,
   },
+  about: {
+    type: String,
+  },
   videos: {
     type: [String],
     default: [],

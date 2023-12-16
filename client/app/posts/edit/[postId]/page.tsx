@@ -6,63 +6,185 @@ import Image from "next/image";
 import { AnimatePresence, Reorder, motion } from "framer-motion";
 import ImagePreview from "../../components/ImagePreview";
 import toast from "react-hot-toast";
-import { PostResponse, TagOptions } from "@/app/util/types";
+import { Part, PostResponse, TagOptions } from "@/app/util/types";
 import { useRouter } from "next/navigation";
 import Button from "@/app/components/Button";
-import { IMG_URL, matcher } from "@/app/util/constants";
-import Link from "next/link";
+import {
+  API_URL,
+  DELAYED_LOADING,
+  IMG_URL,
+  MAX_ABOUT_LENGTH,
+  MAX_DESCRIPTION_LENGTH,
+  MAX_IMAGES,
+  MAX_TITLE_LENGTH,
+  json,
+  matcher,
+  validImageTypes,
+} from "@/app/util/constants";
 import FullImagePreview from "@/app/components/FullImagePreview";
 import shipIcon from "../../../../public/ship.svg";
 import expandIcon from "../../../../public/expand.svg";
 import deleteIcon from "../../../../public/delete.svg";
 import closeIcon from "../../../../public/close.svg";
-import useSessionStorage from "@/app/hooks/useSessionStorage";
 import InputImage from "@/app/components/form/InputImage";
 import { useDropzone } from "react-dropzone";
 import YoutubeEmbed from "../../components/YoutubeEmbed";
 import { useAuth } from "@/app/context/AuthContext";
-import PreviewPost from "@/app/components/PreviewPost";
-
-const validImageTypes = ["image/png", "image/jpg", "image/jpeg", "image/webp"];
-const MAX_DESCRIPTION_LENGTH = 300;
-const MAX_TITLE_LENGTH = 50;
-const MAX_IMAGES = 5;
+import Parts from "@/app/components/Parts";
+import { formatNumberWithCommas, sanitizeHTML } from "@/app/util/utils";
+import useProtected from "@/app/hooks/useProtected";
+import { useEditor } from "@tiptap/react";
+import TextAlign from "@tiptap/extension-text-align";
+import Link from "@tiptap/extension-link";
+import StarterKit from "@tiptap/starter-kit";
+import CharacterCount from "@tiptap/extension-character-count";
+import Placeholder from "@tiptap/extension-placeholder";
+import Underline from "@tiptap/extension-underline";
+import Paragraph from "@tiptap/extension-paragraph";
+import { Image as TippyImage } from "@tiptap/extension-image";
+import Editor from "@/app/components/editor/Editor";
+import LinkModal from "@/app/components/editor/LinkModal";
+import { ImageModal } from "@/app/components/editor/ImageModal";
 
 interface UploadedImage {
   url: string;
   file: File | null;
 }
 
-export default function Page() {
+export default function EditDesign({ params }: { params: { postId: string } }) {
+  const postId = params.postId;
+
+  useProtected();
+
+  const editor = useEditor({
+    onUpdate: () => {
+      setDescProfanity(matcher.hasMatch(editor?.getText()));
+    },
+    extensions: [
+      Underline,
+      TippyImage.configure({
+        inline: true,
+      }),
+      StarterKit.configure({
+        code: false,
+        codeBlock: false,
+        paragraph: false,
+        bulletList: {
+          keepMarks: true,
+          keepAttributes: false,
+        },
+        orderedList: {
+          keepMarks: true,
+          keepAttributes: false,
+        },
+      }),
+      Paragraph.extend({
+        addKeyboardShortcuts() {
+          return {
+            Tab: () => {
+              this.editor
+                .chain()
+                .sinkListItem("listItem")
+                .command(({ tr }) => {
+                  tr.insertText("    ");
+
+                  return true;
+                })
+                .run();
+
+              return true; // <- make sure to return true to prevent the tab from blurring.
+            },
+          };
+        },
+      }),
+      TextAlign.configure({
+        types: ["heading", "paragraph"],
+      }),
+      Link.extend({
+        inclusive: false,
+      }).configure({
+        protocols: ["ftp", "mailto"],
+        openOnClick: false,
+      }),
+      CharacterCount.configure({
+        limit: MAX_DESCRIPTION_LENGTH,
+      }),
+      Placeholder.configure({
+        emptyEditorClass: "is-editor-empty",
+        placeholder: "Enter a description",
+      }),
+    ],
+  });
+
   const router = useRouter();
 
   const { state } = useAuth();
 
+  const [delayedLoading, setDelayedLoading] = useState<boolean>(true);
+
+  const {
+    res: checkRes,
+    loading: checkLoading,
+    error: checkError,
+    fetchData: checkUser,
+  } = useRequest("GET", `/posts/checkUser/${postId}`);
+
   useEffect(() => {
-    if (!state.user?.loggedIn) router.push("/");
-  }, [state, router]);
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+    if (checkRes && !checkLoading) {
+      timeout = setTimeout(() => setDelayedLoading(false), DELAYED_LOADING);
+    }
+    // else setDelayedLoading(true);
+    return () => clearTimeout(timeout!);
+  }, [checkRes, checkLoading]);
 
-  const isLoggedIn = state.user?.loggedIn;
+  useEffect(() => {
+    checkUser();
+  }, [checkUser]);
 
-  if (!isLoggedIn) router.push("/");
+  useEffect(() => {
+    if (!delayedLoading && !checkRes?.data) {
+      setTimeout(() => router.push("/"), 1000);
+    }
+  }, [checkRes, router, delayedLoading]);
+
+  const {
+    res: postRes,
+    loading,
+    error: postError,
+    fetchData: fetchPost,
+  } = useRequest<PostResponse>("GET", `/posts/find/${postId}`);
+
+  useEffect(() => {
+    if (checkRes?.data && !checkError) {
+      fetchPost();
+    }
+  }, [checkError, checkRes, fetchPost]);
+
+  const [originalPost, setOriginalPost] = useState<PostResponse | undefined>();
+
+  useEffect(() => {
+    if (postRes && !postError) {
+      setOriginalPost(postRes.data);
+    }
+  }, [postError, postRes]);
 
   const [error, setError] = useState<string>("");
-
-  const post = useSessionStorage<PostResponse | null>("editPost");
 
   const [deletedImages, setDeletedImages] = useState<string[]>([]);
 
   const setOriginal = useCallback(() => {
-    if (post) {
-      setDescription(post.description);
-      setTitle(post.title);
-      post.tags.forEach((tag) => {
+    if (originalPost && editor) {
+      editor.commands.setContent(originalPost.description);
+      setTitle(originalPost.title);
+      setAbout(originalPost.about);
+      originalPost.tags.forEach((tag) => {
         setTags((prevTags) => {
           return { ...prevTags, [tag]: true };
         });
       });
       const postImages: UploadedImage[] = [];
-      post.imageKeys.forEach((imageKey) => {
+      originalPost.imageKeys.forEach((imageKey) => {
         postImages.push({
           url: IMG_URL + imageKey,
           file: null,
@@ -70,12 +192,21 @@ export default function Page() {
       });
       setImages(postImages);
       setDeletedImages([]);
-      setYoutubeLinks(post.videos);
+      setYoutubeLinks(originalPost.videos);
+      setAddedParts(
+        originalPost.shipParts.map((shipPart) => {
+          return {
+            part: json.getPart(shipPart.partName),
+            amount: shipPart.amount,
+          };
+        })
+      );
     }
-  }, [post]);
+  }, [originalPost, editor]);
 
   useEffect(() => {
-    setOriginal();
+    if (!sessionStorage.getItem("previewPost")) setOriginal();
+    // else sessionStorage.removeItem("previewPost");
   }, [setOriginal]);
 
   const {
@@ -240,11 +371,105 @@ export default function Page() {
   const handleClosePreview = () => setShowPreview(false);
 
   const [title, setTitle] = useState<string>("");
-  const [description, setDescription] = useState<string>("");
+  const [about, setAbout] = useState<string>("");
   const [youtubeLinks, setYoutubeLinks] = useState<string[]>([]);
   const [youtubeLinkInput, setYoutubeLinkInput] = useState<string>("");
+  const [addedParts, setAddedParts] = useState<
+    { part: Part; amount: number }[]
+  >([]);
+
+  const {
+    res: tempImagesRes,
+    loading: tempImagesLoading,
+    error: tempImagesError,
+    fetchData: getTempImages,
+  } = useRequest<string[]>("GET");
+
+  const {
+    res: deleteTempRes,
+    loading: deletingTemp,
+    error: deleteTempError,
+    fetchData: deleteTempImages,
+  } = useRequest("DELETE");
+
+  const fetchAndCreateFiles = useCallback(
+    async (imageUrls: string[]) => {
+      try {
+        const filePromises = imageUrls.map(async (url) => {
+          const response = await fetch(API_URL + url);
+          const [fullName, ext] = url.split(".");
+          const name = fullName.split("/").pop();
+          const blob = await response.blob();
+          const fileName = `${name}.${ext}`;
+          return new File([blob], fileName, { type: `image/${ext}` });
+        });
+
+        const tempFiles = await Promise.all(filePromises);
+
+        const fileList = new DataTransfer();
+
+        tempFiles.forEach((file) => {
+          fileList.items.add(file);
+        });
+
+        setFiles(fileList.files);
+        deleteTempImages("", `/images/temp/${state.user?.userId}`);
+      } catch (error: any) {
+        setError(error);
+      }
+    },
+    [deleteTempImages, state.user]
+  );
+
+  useEffect(() => {
+    if (
+      sessionStorage.getItem("previewPost") !== null &&
+      state &&
+      state.user &&
+      editor
+    ) {
+      const previewPost: {
+        description: string;
+        title: string;
+        about: string;
+        hasMulterImages: boolean;
+        videos: string[];
+        shipParts: { part: Part; amount: number }[];
+        username: string;
+        tags: string[];
+        type: string;
+      } = JSON.parse(sessionStorage.getItem("previewPost")!);
+      if (previewPost.type !== "edit") {
+        sessionStorage.removeItem("previewPost");
+        return;
+      }
+      setTitle(previewPost.title);
+      setAbout(previewPost.about);
+      editor.commands.setContent(previewPost.description);
+      setYoutubeLinks(previewPost.videos);
+      setAddedParts(previewPost.shipParts);
+      const previewTags = {
+        unmodded: previewPost.tags.includes("unmodded"),
+        modded: previewPost.tags.includes("modded"),
+        glitched: previewPost.tags.includes("glitched"),
+      };
+      setTags(previewTags);
+      setAddedParts(previewPost.shipParts);
+      if (previewPost.hasMulterImages) {
+        getTempImages("", `/images/temp/${state.user.userId}`);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, editor]);
+
+  useEffect(() => {
+    if (tempImagesRes && !tempImagesError) {
+      fetchAndCreateFiles(tempImagesRes.data);
+    }
+  }, [tempImagesRes, tempImagesError, fetchAndCreateFiles]);
 
   const [titleProfanity, setTitleProfanity] = useState<boolean>(false);
+  const [aboutProfanity, setAboutProfanity] = useState<boolean>(false);
   const [descProfanity, setDescProfanity] = useState<boolean>(false);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -255,13 +480,11 @@ export default function Page() {
     }
   };
 
-  const handleDescriptionChange = (
-    e: React.ChangeEvent<HTMLTextAreaElement>
-  ) => {
+  const handleAboutChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const inputText = e.target.value;
-    setDescProfanity(matcher.hasMatch(inputText));
-    if (inputText.length <= MAX_DESCRIPTION_LENGTH) {
-      setDescription(inputText);
+    setAboutProfanity(matcher.hasMatch(inputText));
+    if (inputText.length <= MAX_ABOUT_LENGTH) {
+      setAbout(inputText);
     }
   };
 
@@ -304,7 +527,7 @@ export default function Page() {
   const handleSubmit = async (e: React.ChangeEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!post) {
+    if (!originalPost) {
       setError("Something went wrong...");
       return;
     }
@@ -314,7 +537,7 @@ export default function Page() {
       return;
     }
 
-    if (titleProfanity || descProfanity) return;
+    if (titleProfanity || descProfanity || aboutProfanity) return;
 
     if (images.length === 0) {
       setError("Must have at least 1 image!");
@@ -332,7 +555,7 @@ export default function Page() {
           imageForm.append(`images[${index}]`, image.file);
         }
       });
-      imageForm.append("id", post._id);
+      imageForm.append("id", originalPost._id);
       uploadImage(imageForm);
     }
 
@@ -348,7 +571,9 @@ export default function Page() {
 
   // update post
   useEffect(() => {
-    if ((badCode || (!imageUploading && imageRes)) && post !== null) {
+    if (!originalPost) return;
+
+    if ((badCode || (!imageUploading && imageRes)) && originalPost !== null) {
       const tagsField: string[] = Object.keys(tags).filter(
         (tag) => tags[tag as keyof TagOptions]
       );
@@ -366,16 +591,31 @@ export default function Page() {
         (link) => link.split("=").slice(-1)[0]
       );
 
-      const sameTags = sameArray(post.tags, tagsField);
-      const sameImages = sameArray(post.imageKeys, trueImageKeys);
-      const sameVideos = sameArray(post.videos, videos);
+      const sameTags = sameArray(originalPost.tags, tagsField);
+      const sameImages = sameArray(originalPost.imageKeys, trueImageKeys);
+      const sameVideos = sameArray(originalPost.videos, videos);
+      const sameParts = sameArray(
+        originalPost.shipParts.map((shipPart) => {
+          return {
+            part: json.getPart(shipPart.partName),
+            amount: shipPart.amount,
+          };
+        }),
+        addedParts
+      );
+
+      const shipParts = addedParts.map((part) => {
+        return { partName: part.part.partName, amount: part.amount };
+      });
 
       if (
-        title === post.title &&
-        description === post.description &&
+        title === originalPost.title &&
+        about === originalPost.about &&
+        sanitizeHTML(editor?.getHTML() || "") === originalPost.description &&
         sameTags &&
         sameImages &&
-        sameVideos
+        sameVideos &&
+        sameParts
       ) {
         toast.error("No changes detected", {
           id: toastRef.current,
@@ -386,16 +626,21 @@ export default function Page() {
 
       const postData = {
         title,
-        description,
+        about,
+        description:
+          (editor?.storage.characterCount.characters() ?? 0) === 0
+            ? ""
+            : sanitizeHTML(editor?.getHTML() || ""),
         tags: tagsField,
         imageKeys: trueImageKeys,
         videos,
+        shipParts,
       };
 
-      updatePost(postData, `/posts/${post._id}`);
+      updatePost(postData, `/posts/${originalPost._id}`);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [badCode, imageUploading, imageRes, updatePost, post]);
+  }, [badCode, imageUploading, imageRes, updatePost, originalPost]);
 
   useEffect(() => {
     if (updateError) {
@@ -410,18 +655,18 @@ export default function Page() {
       !updating &&
       updateRes &&
       (deletedImages.length === 0 || (!deletingImages && deleteRes)) &&
-      post
+      originalPost
     ) {
       toast.success("Design saved!", {
         id: toastRef.current,
       });
-      router.push("/posts/view/" + post._id);
+      router.push("/posts/view/" + originalPost._id);
     }
   }, [
     updateRes,
     updating,
     router,
-    post,
+    originalPost,
     deletedImages,
     deleteRes,
     deletingImages,
@@ -439,6 +684,7 @@ export default function Page() {
 
   const handleRevert = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
     e.preventDefault();
+    sessionStorage.removeItem("previewPost");
     setOriginal();
   };
 
@@ -450,6 +696,63 @@ export default function Page() {
     }
   };
 
+  const {
+    res: uploadTempImageRes,
+    loading: uploadingTempImage,
+    error: uploadingTempImageError,
+    mutate: uploadTempImage,
+  } = useRequest("POST", `/images/temp/${state.user?.userId}`);
+
+  const handlePreview = (
+    e: React.MouseEvent<HTMLButtonElement, MouseEvent>
+  ) => {
+    e.preventDefault();
+
+    const tagsArray = Object.keys(tags).filter(
+      (tag) => tags[tag as keyof TagOptions]
+    );
+
+    const awsImageOrder: number[] = [];
+
+    images.forEach((image, i) => {
+      if (!image.file) awsImageOrder.push(i);
+    });
+
+    const post = {
+      title,
+      about,
+      description:
+        (editor?.storage.characterCount.characters() ?? 0) === 0
+          ? ""
+          : sanitizeHTML(editor?.getHTML() || ""),
+      videos: youtubeLinks,
+      username: state.user?.username,
+      tags: tagsArray,
+      shipParts: addedParts,
+      awsImageOrder,
+      awsImages: images
+        .filter((image) => !image.file)
+        .map((image) => image.url),
+      hasMulterImages: images.filter((image) => image.file).length > 0,
+      type: "edit",
+      id: postId,
+    };
+    sessionStorage.setItem("previewPost", JSON.stringify(post));
+
+    // uploads images through multer for preview
+    if (images.filter((image) => !!image.file).length > 0) {
+      const imageForm = new FormData();
+      images.forEach((image, index) => {
+        if (image.file) {
+          imageForm.append(`images[${index}]`, image.file);
+        }
+      });
+      uploadTempImage(imageForm);
+    }
+
+    router.push("/posts/preview");
+  };
+
   const handleRemoveVideo = (
     e: React.MouseEvent<HTMLButtonElement, MouseEvent>,
     removeLink: string
@@ -458,50 +761,35 @@ export default function Page() {
     setYoutubeLinks(youtubeLinks.filter((link) => link !== removeLink));
   };
 
-  const handlePreview = (
-    e: React.MouseEvent<HTMLButtonElement, MouseEvent>
-  ) => {
-    e.preventDefault();
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
-    setPreview(true);
-  };
-
-  const [preview, setPreview] = useState(false);
-
-  if (preview) {
-    const tagsArray = Object.keys(tags).filter(
-      (tag) => tags[tag as keyof TagOptions]
-    );
-
-    const imageUrls = Object.values(images).map((image) => image.url);
-
+  if (delayedLoading) {
     return (
-      <main className="flex min-h-screen flex-col items-center p-24">
-        <Button
-          className="btn-secondary self-start"
-          handleClick={() => setPreview(false)}
-        >
-          Back
-        </Button>
-        <PreviewPost
-          title={title}
-          description={description}
-          tags={tagsArray}
-          videos={youtubeLinks}
-          images={imageUrls}
-        />
+      <main className="flex min-h-screen flex-col items-center p-24 gap-2">
+        <span className="loading loading-ring loading-lg" />
+      </main>
+    );
+  }
+
+  if (!delayedLoading && !checkRes?.data) {
+    return (
+      <main className="flex min-h-screen flex-col items-center p-24 gap-2">
+        Not authorized
       </main>
     );
   }
 
   return (
     <main
-      className="flex min-h-screen flex-col items-center p-24"
+      className="flex min-h-screen flex-col items-center p-24 gap-2"
       {...getRootProps()}
     >
+      <LinkModal editor={editor} />
+      <ImageModal editor={editor} />
+      <Button
+        className="join-item btn-neutral text-white font-bold py-2 px-4 self-end"
+        handleClick={handlePreview}
+      >
+        Preview
+      </Button>
       <input {...getInputProps()} />
       <AnimatePresence>
         {showPreview && (
@@ -521,23 +809,23 @@ export default function Page() {
           </motion.div>
         )}
       </AnimatePresence>
-      <h1 className="text-2xl font-bold mb-4">Upload Ship Design</h1>
+      <h1 className="text-2xl font-bold">Edit Ship Design</h1>
       <form
         onSubmit={handleSubmit}
-        className="flex flex-col items-center w-full"
+        className="flex flex-col items-center w-full gap-4"
       >
-        <div className="form-control w-full max-w-xs">
+        <div className="form-control w-1/2 max-w-lg">
           <label className="label font-medium text-gray-600">
             <span className="label-text text-lg">Title</span>
           </label>
           <input
             type="text"
-            className={`input input-bordered w-full ${
+            value={title}
+            onChange={handleTitleChange}
+            className={`bg-white input input-bordered shadow w-full ${
               titleProfanity ? "input-error" : ""
             }`}
             placeholder="Enter title"
-            value={title}
-            onChange={handleTitleChange}
             required
           />
           <label className="label text-sm text-gray-500">
@@ -545,6 +833,30 @@ export default function Page() {
               {title.length}/{MAX_TITLE_LENGTH}
             </span>
             {titleProfanity && (
+              <span className="label-text-alt text-error">
+                Profanity detected
+              </span>
+            )}
+          </label>
+        </div>
+        <div className="form-control w-2/3">
+          <label className="label font-medium text-gray-600">
+            <span className="label-text text-lg">About this Design</span>
+          </label>
+          <textarea
+            value={about}
+            onChange={handleAboutChange}
+            className={`textarea textarea-bordered bg-white shadow w-full ${
+              aboutProfanity ? "input-error" : ""
+            }`}
+            placeholder=""
+            required
+          />
+          <label className="label text-sm text-gray-500">
+            <span className="label-text-alt">
+              {about.length}/{MAX_ABOUT_LENGTH}
+            </span>
+            {aboutProfanity && (
               <span className="label-text-alt text-error">
                 Profanity detected
               </span>
@@ -590,23 +902,17 @@ export default function Page() {
             })}
           </div>
         </div>
-        <div className="mb-4 form-control w-1/2">
+        <div className="form-control w-1/2">
           <label className="label font-medium text-gray-600">
             <span className="label-text text-lg">Description</span>
           </label>
-          <textarea
-            className={`textarea textarea-bordered h-32 p-2 w-full text-lg ${
-              descProfanity ? "textarea-error" : ""
-            }`}
-            placeholder="Enter description"
-            value={description}
-            onChange={handleDescriptionChange}
-            maxLength={MAX_DESCRIPTION_LENGTH}
-            required
-          />
+          <Editor editor={editor} />
           <label className="label text-sm text-gray-500">
             <span className="label-text-alt">
-              {description.length}/{MAX_DESCRIPTION_LENGTH}
+              {formatNumberWithCommas(
+                editor?.storage.characterCount.characters() ?? 0
+              )}
+              /{formatNumberWithCommas(MAX_DESCRIPTION_LENGTH)}
             </span>
             {descProfanity && (
               <span className="label-text-alt text-error">
@@ -615,124 +921,135 @@ export default function Page() {
             )}
           </label>
         </div>
-        <h2 className="text-2xl">Images</h2>
-        <h3>
-          Upload up to 5 images to showoff your design. Images must be less than
-          5 MB. Must upload at least 1 image. Drag to reorder images.
-        </h3>
-        {error && <ErrorText text={error} />}
-        {imageError && <ErrorText text={imageError} />}
-        <InputImage ref={fileInputRef} handleUploadImage={handleUploadImage} />
-        <Reorder.Group
-          className="grid grid-cols-5 gap-4 w-full h-80 items-center justify-evenly my-4 will-change-transform"
-          axis="x"
-          values={images}
-          onReorder={setImages}
-        >
-          {images.map((image, index) => {
-            return (
-              <ImagePreview
-                image={image}
-                key={image.url}
-                handleRemoveImage={handleRemoveImage}
-                handlePreviewImage={handlePreviewImage}
-              />
-            );
-          })}
-          {Array(MAX_IMAGES - images.length)
-            .fill(null)
-            .map((_, i) => {
+        <div className="form-control w-2/3 flex flex-col items-center gap-2">
+          <h2 className="text-2xl">Ship Parts</h2>
+          <Parts addedParts={addedParts} setAddedParts={setAddedParts} />
+        </div>
+        <div className="form-control w-full flex flex-col items-center gap-2">
+          <h2 className="text-2xl">Images</h2>
+          <h3>
+            Upload up to 5 images to showoff your design. Images must be less
+            than 5 MB. Must upload at least 1 image. Drag to reorder images.
+          </h3>
+          {error && <ErrorText text={error} />}
+          {imageError && <ErrorText text={imageError} />}
+          <InputImage
+            ref={fileInputRef}
+            handleUploadImage={handleUploadImage}
+          />
+          <Reorder.Group
+            className="grid grid-cols-5 gap-4 w-full h-80 items-center justify-evenly will-change-transform"
+            axis="x"
+            values={images}
+            onReorder={setImages}
+          >
+            {images.map((image) => {
               return (
-                <div
-                  key={i}
-                  className="border border-black w-full h-full flex flex-col m-4"
-                  onClick={handleDivClick}
-                >
-                  <div className="w-full h-3/4 flex items-center justify-center relative">
-                    <Image
-                      src={shipIcon}
-                      className="select-none"
-                      alt={`placeholder`}
-                      width={50}
-                      height={50}
-                      draggable={false}
-                    />
-                  </div>
-                  <div className="flex p-4 items-center justify-evenly bg-slate-300 border-t-[1px] border-t-black grow">
-                    <Button className="btn-circle btn-disabled">
-                      <Image
-                        src={expandIcon}
-                        alt="edit"
-                        width={35}
-                        height={35}
-                      />
-                    </Button>
-                    <Button className="btn-circle btn-disabled">
-                      <Image
-                        src={deleteIcon}
-                        alt="delete"
-                        width={35}
-                        height={35}
-                      />
-                    </Button>
-                  </div>
-                </div>
+                <ImagePreview
+                  image={image}
+                  key={image.url}
+                  handleRemoveImage={handleRemoveImage}
+                  handlePreviewImage={handlePreviewImage}
+                />
               );
             })}
-        </Reorder.Group>
-        <h2 className="text-2xl">Videos</h2>
-        <p>Link up to 12 YouTube videos to show off your design.</p>
-        {linkError && <ErrorText text={linkError} />}
-        <div className="my-4">
-          <label className="block text-sm font-medium text-gray-600">
-            YouTube Links
-          </label>
-          <div className="join">
-            <input
-              className="join-item input input-bordered"
-              placeholder="Enter YouTube link"
-              value={youtubeLinkInput}
-              onChange={(e) => setYoutubeLinkInput(e.target.value)}
-            />
-            <Button
-              className="join-item  btn-accent text-white px-4 py-2"
-              handleClick={handleYoutubeLinkAdd}
-            >
-              Add
-            </Button>
-          </div>
+            {Array(MAX_IMAGES - images.length)
+              .fill(null)
+              .map((_, i) => {
+                return (
+                  <div
+                    key={i}
+                    className="border border-black w-full h-full flex flex-col m-4 cursor-pointer"
+                    onClick={handleDivClick}
+                  >
+                    <div className="w-full h-3/4 flex items-center justify-center relative">
+                      <Image
+                        src={shipIcon}
+                        className="select-none"
+                        alt={`placeholder`}
+                        width={50}
+                        height={50}
+                        draggable={false}
+                      />
+                    </div>
+                    <div className="flex p-4 items-center justify-evenly bg-slate-300 border-t-[1px] border-t-black grow">
+                      <Button className="btn-circle btn-disabled">
+                        <Image
+                          src={expandIcon}
+                          alt="edit"
+                          width={35}
+                          height={35}
+                        />
+                      </Button>
+                      <Button className="btn-circle btn-disabled">
+                        <Image
+                          src={deleteIcon}
+                          alt="delete"
+                          width={35}
+                          height={35}
+                        />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+          </Reorder.Group>
         </div>
-        <Reorder.Group
-          className="flex gap-4 w-full mb-4 overflow-auto"
-          axis="x"
-          values={youtubeLinks}
-          onReorder={setYoutubeLinks}
-        >
-          {youtubeLinks.map((link, i) => (
-            <Reorder.Item
-              key={link}
-              value={link}
-              className="flex flex-col m-auto"
-            >
-              <div className="w-full flex justify-between items-center py-2 px-4 bg-slate-300 rounded-t-xl ">
-                <p className="font-medium">Video {i + 1}</p>
-                <button
-                  className="btn btn-sm btn-circle btn-ghost"
-                  onClick={(e) => handleRemoveVideo(e, link)}
-                >
-                  <Image src={closeIcon} alt="close" width={40} height={40} />
-                </button>
-              </div>
-              <YoutubeEmbed src={link} />
-            </Reorder.Item>
-          ))}
-        </Reorder.Group>
+        <div className="form-control w-full flex flex-col items-center gap-2">
+          <h2 className="text-2xl">Videos</h2>
+          <p>Link up to 12 YouTube videos to show off your design.</p>
+          {linkError && <ErrorText text={linkError} />}
+          <div>
+            <label className="block text-sm font-medium text-gray-600">
+              YouTube Links
+            </label>
+            <div className="join shadow">
+              <input
+                className="join-item input input-bordered bg-white"
+                placeholder="Enter YouTube link"
+                value={youtubeLinkInput}
+                onChange={(e) => setYoutubeLinkInput(e.target.value)}
+              />
+              <Button
+                className="join-item  btn-accent text-white px-4 py-2"
+                handleClick={handleYoutubeLinkAdd}
+              >
+                Add
+              </Button>
+            </div>
+          </div>
+          <Reorder.Group
+            className="flex gap-4 w-full overflow-auto"
+            axis="x"
+            values={youtubeLinks}
+            onReorder={setYoutubeLinks}
+          >
+            {youtubeLinks.map((link, i) => (
+              <Reorder.Item
+                key={link}
+                value={link}
+                className="flex flex-col m-auto"
+              >
+                <div className="w-full flex justify-between items-center py-2 px-4 bg-slate-300 rounded-t-xl ">
+                  <p className="font-medium">Video {i + 1}</p>
+                  <button
+                    className="btn btn-sm btn-circle btn-ghost"
+                    onClick={(e) => handleRemoveVideo(e, link)}
+                  >
+                    <Image src={closeIcon} alt="close" width={40} height={40} />
+                  </button>
+                </div>
+                <YoutubeEmbed src={link} />
+              </Reorder.Item>
+            ))}
+          </Reorder.Group>
+        </div>
         <div className="join">
           <Button
             className="join-item btn-neutral text-white font-bold py-2 px-4"
             handleClick={handleRevert}
           >
-            Revert
+            Undo All
           </Button>
           <Button
             className="join-item btn-neutral text-white font-bold py-2 px-4"
@@ -741,7 +1058,7 @@ export default function Page() {
             Preview
           </Button>
           <Button className="join-item submit btn-neutral text-white font-bold py-2 px-4">
-            Confirm
+            Save Changes
           </Button>
         </div>
       </form>

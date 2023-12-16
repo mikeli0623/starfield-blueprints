@@ -7,10 +7,16 @@ import Image from "next/image";
 interface Props {
   password: string;
   type: string;
+  key?: number;
   handleChangePassword: React.ChangeEventHandler<HTMLInputElement>;
 }
 
-const InputPassword = ({ type, password, handleChangePassword }: Props) => {
+const InputPassword = ({
+  type,
+  password,
+  key = 0,
+  handleChangePassword,
+}: Props) => {
   const [showPassword, setShowPassword] = useState(false);
 
   return (
@@ -21,7 +27,7 @@ const InputPassword = ({ type, password, handleChangePassword }: Props) => {
       <div className="join">
         <input
           type={showPassword ? "text" : "password"}
-          id="password"
+          id={`passsword-${key}`}
           value={password}
           onChange={handleChangePassword}
           className="input input-bordered join-item"

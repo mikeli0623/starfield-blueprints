@@ -7,12 +7,17 @@ import { useRouter } from "next/navigation";
 import InputPassword from "@/app/components/form/InputPassword";
 import ErrorText from "@/app/components/ErrorText";
 import PasswordChecklist from "react-password-checklist";
+import useProtected from "@/app/hooks/useProtected";
 
-export default function Page({}: {}) {
+export default function EditUser({}: {}) {
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [retypedNewPassword, setRetypedNewPassword] = useState("");
   const [validPassword, setValidPassword] = useState(false);
+
+  const router = useRouter();
+
+  useProtected();
 
   const handleChangePassword = (
     e: React.ChangeEvent<HTMLInputElement>
@@ -55,10 +60,8 @@ export default function Page({}: {}) {
     e: React.MouseEvent<HTMLButtonElement, MouseEvent>
   ) => {
     e.preventDefault();
-    updatePassword({ password: newPassword });
+    if (validPassword) updatePassword({ password: newPassword });
   };
-
-  const router = useRouter();
 
   useEffect(() => {
     if (passwordUpdateRes && !updateError) {
@@ -91,11 +94,13 @@ export default function Page({}: {}) {
             <InputPassword
               type="New Password"
               password={newPassword}
+              key={1}
               handleChangePassword={handleChangeNewPassword}
             />
             <InputPassword
               type="Retype New Password"
               password={retypedNewPassword}
+              key={2}
               handleChangePassword={handleChangeRetypedNewPassword}
             />
             <PasswordChecklist

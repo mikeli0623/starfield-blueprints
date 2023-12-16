@@ -9,7 +9,7 @@ import deleteIcon from "../../public/delete.svg";
 interface UserPostProps {
   post: PostResponse;
   handleDelete: (postId: string, postName: string) => void;
-  handleUpdate: (post: PostResponse) => void;
+  handleUpdate: (postId: string) => void;
   handleLike: ((postId: string) => void) | null;
   liked: boolean;
 }
@@ -25,7 +25,10 @@ const UserPost = ({
     <div className="flex flex-col m-4 justify-between bg-slate-300 rounded-b-2xl shadow-xl">
       <PostCard post={post} minimal liked={liked} handleLike={handleLike} />
       <div className="flex p-4 items-center justify-evenly bg-slate-300 rounded-b-2xl grow">
-        <Button className="btn-circle" handleClick={() => handleUpdate(post)}>
+        <Button
+          className="btn-circle"
+          handleClick={() => handleUpdate(post._id)}
+        >
           <Image src={editIcon} alt="edit" width={35} height={35} />
         </Button>
         <Button

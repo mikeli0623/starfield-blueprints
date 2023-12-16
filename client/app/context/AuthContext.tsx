@@ -6,7 +6,6 @@ import React, {
   useContext,
   ReactNode,
 } from "react";
-import Cookies from "js-cookie";
 import useRequest from "../hooks/useRequest";
 import { UserResponse } from "../util/types";
 
@@ -46,7 +45,7 @@ const INITIAL_STATE: AuthState = {
     posts: [],
     likedPosts: [],
   },
-  loading: false,
+  loading: true,
   error: "",
 };
 
@@ -74,8 +73,8 @@ const AuthReducer = (state: AuthState, action: AuthAction): AuthState => {
         error: action.payload,
       };
     case "LOGOUT":
-      Cookies.remove("username");
-      Cookies.remove("loggedIn");
+      sessionStorage.clear();
+      localStorage.clear();
       return {
         ...state,
         user: {
@@ -106,21 +105,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 }) => {
   const [state, dispatch] = useReducer(AuthReducer, INITIAL_STATE);
 
-  useEffect(() => {
-    if (state.user) {
-      Cookies.set("username", encodeURIComponent(state.user.username), {
-        secure: true,
-        sameSite: "Strict",
-        path: "/",
-      });
-      Cookies.set("loggedIn", JSON.stringify(state.user.loggedIn), {
-        secure: true,
-        sameSite: "Strict",
-        path: "/",
-      });
-    }
-  }, [state.user]);
-
   const {
     res: authRes,
     fetchData,
@@ -140,6 +124,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   useEffect(() => {
     if (authRes && !authError) fetchUser();
   }, [authError, authRes, fetchUser]);
+
+  useEffect(() => {
+    if (authError) {
+      dispatch({
+        type: "REFRESH_USER",
+        payload: {
+          username: "",
+          userId: "",
+          iv: "",
+          loggedIn: false,
+          posts: [],
+          likedPosts: [],
+        },
+      });
+    }
+  }, [authError]);
 
   useEffect(() => {
     if (userRes && !userError) {

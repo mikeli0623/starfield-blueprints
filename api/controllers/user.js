@@ -107,6 +107,15 @@ module.exports = {
       const realId = decrypt(userId, iv);
       const user = await User.findById(realId).populate("posts likedPosts");
       if (!user) next(createError(404, "User not found"));
+
+      user.posts.forEach((post) => {
+        post.userId.id = encrypt(post.userId.id.toString(), post.userId.iv);
+      });
+
+      user.likedPosts.forEach((post) => {
+        post.userId.id = encrypt(post.userId.id.toString(), post.userId.iv);
+      });
+
       res.status(200).json(user);
     } catch (err) {
       next(err);

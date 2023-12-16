@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import likeIcon from "../../public/like.svg";
 import likedIcon from "../../public/liked.svg";
-import { formatNumberWithCommas } from "../util/util";
+import { formatNumberWithCommas } from "../util/utils";
 
 interface PostProps {
   post: PostResponse;
@@ -40,12 +40,11 @@ const PostCard = ({
           />
         </figure>
       </Link>
-      <div className="card-body p-5">
+      <div className="card-body p-4">
         <Link href={`/posts/view/${post._id}`}>
           <h2 className="card-title">{post.title}</h2>
         </Link>
-        <p>{post.description}</p>
-
+        <p className="max-h-32 text-[15px]">{post.about}</p>
         <div className="grid grid-cols-[0.65fr_0.35fr] gap-2">
           <div className="flex flex-col text-xs truncate">
             {!minimal && (

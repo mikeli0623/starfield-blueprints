@@ -11,7 +11,6 @@ export default function useOnScreen(
   useEffect(() => {
     observerRef.current = new IntersectionObserver(
       ([entry]) => {
-        console.log("here");
         setRatio(entry.intersectionRatio);
         setIsOnScreen(entry.isIntersecting);
       },

@@ -2,51 +2,20 @@ import { Part } from "./types";
 
 class ParseJSON {
   partsList: Part[];
-  chunkSize: number;
-  maxChunkSize: number;
-  constructor(chunkSize: number = 50) {
+  constructor() {
     this.partsList = require(`../../public/shipParts.json`);
-    this.chunkSize = chunkSize;
-    this.maxChunkSize = this.partsList.length;
   }
 
-  getAllParts() {
+  getParts() {
     return this.partsList;
   }
 
-  getParts(
-    moduleFilter: string,
-    classFilter: string,
-    currentChunkSize: number
-  ) {
-    let filteredList = [...this.partsList];
-
-    if (moduleFilter !== "all") {
-      filteredList = filteredList.filter(
-        (part: any) =>
-          part.moduleType.toLowerCase() === moduleFilter.toLowerCase()
-      );
-    }
-
-    if (classFilter !== "all") {
-      filteredList = filteredList.filter(
-        (part: any) =>
-          part.class && part.class.toLowerCase() === classFilter.toLowerCase()
-      );
-    }
-
-    this.maxChunkSize = filteredList.length;
-
-    const nextChunk = filteredList.slice(0, currentChunkSize);
-    return nextChunk;
+  getPartFromIndex(index: number): Part {
+    return this.partsList[index];
   }
 
-  getChunkSize() {
-    return this.chunkSize;
-  }
-
-  getMaxChunkSize() {
-    return this.maxChunkSize;
+  getIndexFromPartName(partName: string): number {
+    return this.partsList.findIndex((part) => part.partName === partName);
   }
 
   getPart(partName: string): Part {

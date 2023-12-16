@@ -9,14 +9,28 @@ import Image from "next/image";
 import likeIcon from "../../../../public/like.svg";
 import likedIcon from "../../../../public/liked.svg";
 import { useAuth } from "@/app/context/AuthContext";
-import { formatNumberWithCommas } from "@/app/util/util";
+import { formatNumberWithCommas } from "@/app/util/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useDesigns } from "@/app/context/DesignsContext";
 import FinalPartsTable from "@/app/components/FinalPartsTable";
+import Skeleton from "react-loading-skeleton";
+import Button from "@/app/components/Button";
+import SubNav from "@/app/components/SubNav";
+import { useEditor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import TextAlign from "@tiptap/extension-text-align";
+import { Link as TippyLink } from "@tiptap/extension-link";
+import Underline from "@tiptap/extension-underline";
+import { Image as TippyImage } from "@tiptap/extension-image";
+import Editor from "@/app/components/editor/Editor";
 
-export default function Page({ params }: { params: { postId: string } }) {
+export default function ViewDesign({ params }: { params: { postId: string } }) {
   const postId = params.postId;
+
+  useEffect(() => {
+    sessionStorage.clear();
+  }, []);
 
   const { state } = useAuth();
   const isLoggedIn = state.user?.loggedIn;
@@ -50,6 +64,39 @@ export default function Page({ params }: { params: { postId: string } }) {
 
   const router = useRouter();
 
+  const editor = useEditor({
+    editable: false,
+    extensions: [
+      TippyImage.configure({
+        inline: true,
+      }),
+      Underline,
+      StarterKit.configure({
+        bulletList: {
+          keepMarks: true,
+          keepAttributes: false,
+        },
+        orderedList: {
+          keepMarks: true,
+          keepAttributes: false,
+        },
+      }),
+      TextAlign.configure({
+        types: ["heading", "paragraph"],
+      }),
+      TippyLink.configure({
+        protocols: ["ftp", "mailto"],
+        openOnClick: false,
+      }),
+    ],
+  });
+
+  useEffect(() => {
+    if (res && editor) {
+      editor.commands.setContent(res.data.description);
+    }
+  }, [res, editor]);
+
   if (!res && error)
     return (
       <main className="flex min-h-screen flex-col items-center p-24">
@@ -57,103 +104,198 @@ export default function Page({ params }: { params: { postId: string } }) {
       </main>
     );
 
-  if (!res)
-    return (
-      <main className="flex min-h-screen flex-col items-center p-24">
-        <div>Skeleton</div>
-      </main>
-    );
-
-  const { data } = res;
+  const data = res?.data;
 
   return (
     <main className="flex min-h-screen flex-col items-center p-24 gap-4">
-      <div className="flex items-center flex-col">
-        <h1 className="text-2xl font-bold">{data.title}</h1>
-
-        <Link href={`/users/view/${data.userId.id}/${data.userId.iv}`}>
-          by {data.username}
-        </Link>
-      </div>
-      <div className="flex gap-2">
-        {data.tags.map((tag) => (
-          <div key={tag} className="badge badge-outline">
-            {tag}
-          </div>
-        ))}
-      </div>
-      <div className="flex items-center justify-center gap-2">
-        <AnimatePresence>
-          {isLoggedIn && isDesignLiked(postId) ? (
-            <motion.div
-              initial={{ opacity: 0, scale: 1 }}
-              animate={{ opacity: 1, scale: 1.1 }}
-              exit={{ opacity: 0, scale: 1 }}
-              onClick={() => {
-                removeLikedDesign(postId);
-                setClicked(!clicked);
-              }}
+      <SubNav>
+        <div></div>
+        <div className="flex gap-2 items-center justify-center">
+          <Button handleClick={() => router.push("#title")} className="m-auto">
+            Title
+          </Button>
+          <Button handleClick={() => router.push("#images")} className="m-auto">
+            Images
+          </Button>
+          <Button handleClick={() => router.push("#about")} className="m-auto">
+            About
+          </Button>
+          {data && data.description && (
+            <Button
+              handleClick={() => router.push("#description")}
+              className="m-auto"
             >
-              <Image
-                className={`cursor-pointer`}
-                src={likedIcon}
-                alt="likes"
-                width={28}
-                height={28}
-              />
-            </motion.div>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0, scale: 1.1 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.1 }}
-              onClick={() => {
-                if (!isLoggedIn) router.push("/register");
-                else {
-                  addLikedDesign(postId);
-                  setClicked(!clicked);
-                }
-                // if (handleLike) {
-                //   handleLike(post._id, post.likes, !clicked);
-                //   setClicked(!clicked);
-                // }
-              }}
-            >
-              <Image
-                className={`cursor-pointer`}
-                src={likeIcon}
-                alt="likes"
-                width={28}
-                height={28}
-              />
-            </motion.div>
+              Description
+            </Button>
           )}
-        </AnimatePresence>
-        {formatNumberWithCommas(data.likes + likeModifier())}
-      </div>
-      <div className="w-full h-fit flex flex-col justify-center items-center">
-        <Carousel autoplay={false} images={data.imageKeys} size="lg" preview />
-      </div>
-      <h2 className="text-2xl font-bold">Description</h2>
-      {data.description}
-      <h2 className="text-2xl font-bold">Videos</h2>
-      <div className="flex gap-4 w-full overflow-auto">
-        {data.videos.length > 0 ? (
-          <>
-            {data.videos.map((video, i) => (
-              <div key={video + i} className="m-auto">
-                <YoutubeEmbed src={video} />
-              </div>
-            ))}
-          </>
+          {data && data?.videos.length > 0 && (
+            <Button
+              handleClick={() => router.push("#videos")}
+              className="m-auto"
+            >
+              Videos
+            </Button>
+          )}
+          <Button handleClick={() => router.push("#parts")} className="m-auto">
+            Parts
+          </Button>
+        </div>
+      </SubNav>
+      <div className="flex items-center flex-col" id="title">
+        <h1 className="text-2xl font-bold">
+          {data?.title || <Skeleton height={24} width={240} />}
+        </h1>
+        {data ? (
+          <Link href={`/users/view/${data.userId.id}/${data.userId.iv}`}>
+            by {data.username}
+          </Link>
         ) : (
-          <p className="m-auto">No videos</p>
+          <Skeleton height={16} width={200} />
         )}
       </div>
-      <h2 className="text-2xl font-bold">Ship Parts</h2>
-      <div className="w-4/5">
-        <FinalPartsTable parts={data.shipParts} />
+      <div className="flex gap-2">
+        {data ? (
+          data.tags.map((tag) => (
+            <div key={tag} className="badge badge-outline">
+              {tag}
+            </div>
+          ))
+        ) : (
+          <Skeleton height={16} width={100} />
+        )}
       </div>
+      <div className="flex items-center justify-center gap-2">
+        {data ? (
+          <>
+            <AnimatePresence>
+              {isLoggedIn && isDesignLiked(postId) ? (
+                <motion.div
+                  initial={{ opacity: 0, scale: 1 }}
+                  animate={{ opacity: 1, scale: 1.1 }}
+                  exit={{ opacity: 0, scale: 1 }}
+                  onClick={() => {
+                    removeLikedDesign(postId);
+                    setClicked(!clicked);
+                  }}
+                >
+                  <Image
+                    className={`cursor-pointer`}
+                    src={likedIcon}
+                    alt="likes"
+                    width={28}
+                    height={28}
+                  />
+                </motion.div>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0, scale: 1.1 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 1.1 }}
+                  onClick={() => {
+                    if (!isLoggedIn) router.push("/register");
+                    else {
+                      addLikedDesign(postId);
+                      setClicked(!clicked);
+                    }
+                  }}
+                >
+                  <Image
+                    className={`cursor-pointer`}
+                    src={likeIcon}
+                    alt="likes"
+                    width={28}
+                    height={28}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+            {formatNumberWithCommas(data.likes + likeModifier())}
+          </>
+        ) : (
+          <>
+            <Skeleton circle height={30} width={30} />
+            <Skeleton width={100} />
+          </>
+        )}
+      </div>
+      <div
+        className="w-full h-fit flex flex-col justify-center items-center"
+        id="images"
+      >
+        <Carousel
+          autoplay={false}
+          images={data?.imageKeys || []}
+          size="lg"
+          preview
+        />
+      </div>
+      <h2 className="text-2xl font-bold" id="about">
+        About This Design
+      </h2>
+      {data ? (
+        <p className="w-2/3 text-center">{data.about}</p>
+      ) : (
+        <Skeleton count={2} width={1000} />
+      )}
+      {data ? (
+        data.description && (
+          <>
+            <h2 className="text-2xl font-bold" id="description">
+              Description
+            </h2>
+            <div className="w-3/4">
+              <Editor editable={false} editor={editor} />
+            </div>
+          </>
+        )
+      ) : (
+        <>
+          <h2 className="text-2xl font-bold" id="description">
+            Description
+          </h2>
+          <Skeleton count={5} width={1000} />
+        </>
+      )}
+      {data ? (
+        data.videos.length > 0 && (
+          <>
+            <h2 className="text-2xl font-bold" id="videos">
+              Videos
+            </h2>
+            <div className="flex gap-4 w-full overflow-auto">
+              {data.videos.map((video, i) => (
+                <div key={video + i} className="m-auto">
+                  <YoutubeEmbed src={video} />
+                </div>
+              ))}
+            </div>
+          </>
+        )
+      ) : (
+        <>
+          <h2 className="text-2xl font-bold" id="videos">
+            Videos
+          </h2>
+          <Skeleton height={405} width={720} borderRadius={0} />
+        </>
+      )}
+      {data ? (
+        data.shipParts && (
+          <>
+            <h2 className="text-2xl font-bold" id="parts">
+              Ship Parts
+            </h2>
+            <FinalPartsTable parts={data.shipParts} />
+          </>
+        )
+      ) : (
+        <>
+          <h2 className="text-2xl font-bold" id="parts">
+            Ship Parts
+          </h2>
+          <FinalPartsTable parts={[]} />
+        </>
+      )}
     </main>
   );
 }

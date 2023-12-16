@@ -14,6 +14,10 @@
   }
 }
 
+html {
+  scroll-padding-top: 160px;
+}
+
 body {
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(
@@ -27,4 +31,18 @@ body {
 .svg-white {
   filter: invert(100%) sepia(0%) saturate(7474%) hue-rotate(151deg)
     brightness(96%) contrast(110%);
+}
+
+.svg-muted {
+  filter: invert(94%) sepia(2%) saturate(902%) hue-rotate(355deg)
+    brightness(107%) contrast(84%);
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.17);
+  border-radius: 16px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10.3px);
+  -webkit-backdrop-filter: blur(10.3px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
 }

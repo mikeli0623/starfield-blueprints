@@ -3,8 +3,6 @@ import React, { useEffect, useState } from "react";
 import Carousel from "./Carousel";
 import useRequest from "../hooks/useRequest";
 import { PostResponse } from "../util/types";
-import Skeleton from "react-loading-skeleton";
-import "react-loading-skeleton/dist/skeleton.css";
 
 const Featured = () => {
   const {
@@ -28,15 +26,13 @@ const Featured = () => {
 
   return (
     <div className="w-full h-fit flex flex-col justify-center items-center">
-      <h1 className="text-3xl mb-4">Designs of the Week</h1>
+      <h1 className="text-3xl mb-4 font-bold">Designs of the Week</h1>
       <Carousel
         size="md"
         autoplay={true}
         images={images}
         hoverProps={featuredRes?.data}
-      >
-        <Skeleton />
-      </Carousel>
+      />
     </div>
   );
 };
