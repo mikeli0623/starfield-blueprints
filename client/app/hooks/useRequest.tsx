@@ -28,7 +28,7 @@ function useRequest<T>(method: RequestMethod, url?: string): APIResponse<T> {
         let res: AxiosResponse<T>;
         switch (method) {
           case "GET":
-            res = await axios.get<T>(API_URL + (newUrl || url) + queries, {
+            res = await axios.get<T>(`${API_URL}${newUrl || url}${queries}`, {
               withCredentials: true,
             });
             break;
@@ -88,7 +88,13 @@ function useRequest<T>(method: RequestMethod, url?: string): APIResponse<T> {
     [method, url]
   );
 
-  return { res, error, loading, fetchData, mutate };
+  return {
+    res,
+    error,
+    loading,
+    fetchData,
+    mutate,
+  };
 }
 
 export default useRequest;

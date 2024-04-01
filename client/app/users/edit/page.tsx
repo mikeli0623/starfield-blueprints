@@ -71,7 +71,7 @@ export default function EditUser({}: {}) {
   }, [passwordUpdateRes, updateError, router]);
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-24 gap-2">
+    <main className="flex min-h-screen flex-col items-center py-24 lg:px-24 md:px-16 px-8 gap-2">
       <Button
         className="btn-secondary self-start"
         handleClick={() => router.back()}

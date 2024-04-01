@@ -9,8 +9,7 @@ const YoutubeEmbed = ({ src }: Props) => {
 
   return (
     <iframe
-      width="720"
-      height="405"
+      className="aspect-video lg:w-[700px] md:w-[550px] w-[400px]"
       src={`https://www.youtube.com/embed/${id}`}
       allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
       allowFullScreen

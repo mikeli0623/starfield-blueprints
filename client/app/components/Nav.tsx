@@ -75,12 +75,19 @@ const Nav = () => {
             height={30}
             alt="close"
             className="swap-off"
+            draggable={false}
           />
         </label>
       </Button>
       <Link href="/">
         <Button className="btn-circle">
-          <Image src={homeIcon} alt="Home" width={30} height={30} />
+          <Image
+            src={homeIcon}
+            alt="Home"
+            width={30}
+            height={30}
+            draggable={false}
+          />
         </Button>
       </Link>
       {!userState.loggedIn && (
@@ -116,6 +123,7 @@ const Nav = () => {
               alt="User placeholder"
               width={35}
               height={35}
+              draggable={false}
             />
           </Button>
         </Link>

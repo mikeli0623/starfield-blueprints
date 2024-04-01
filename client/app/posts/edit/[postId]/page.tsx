@@ -11,7 +11,6 @@ import { useRouter } from "next/navigation";
 import Button from "@/app/components/Button";
 import {
   API_URL,
-  DELAYED_LOADING,
   IMG_URL,
   MAX_ABOUT_LENGTH,
   MAX_DESCRIPTION_LENGTH,
@@ -120,8 +119,6 @@ export default function EditDesign({ params }: { params: { postId: string } }) {
 
   const { state } = useAuth();
 
-  const [delayedLoading, setDelayedLoading] = useState<boolean>(true);
-
   const {
     res: checkRes,
     loading: checkLoading,
@@ -130,27 +127,18 @@ export default function EditDesign({ params }: { params: { postId: string } }) {
   } = useRequest("GET", `/posts/checkUser/${postId}`);
 
   useEffect(() => {
-    let timeout: ReturnType<typeof setTimeout> | null = null;
-    if (checkRes && !checkLoading) {
-      timeout = setTimeout(() => setDelayedLoading(false), DELAYED_LOADING);
-    }
-    // else setDelayedLoading(true);
-    return () => clearTimeout(timeout!);
-  }, [checkRes, checkLoading]);
-
-  useEffect(() => {
     checkUser();
   }, [checkUser]);
 
   useEffect(() => {
-    if (!delayedLoading && !checkRes?.data) {
+    if (checkRes && !checkLoading && !checkRes.data) {
       setTimeout(() => router.push("/"), 1000);
     }
-  }, [checkRes, router, delayedLoading]);
+  }, [checkRes, router, checkLoading]);
 
   const {
     res: postRes,
-    loading,
+    // loading,
     error: postError,
     fetchData: fetchPost,
   } = useRequest<PostResponse>("GET", `/posts/find/${postId}`);
@@ -226,7 +214,7 @@ export default function EditDesign({ params }: { params: { postId: string } }) {
   const {
     res: deleteRes,
     fetchData: deleteImages,
-    error: deleteError,
+    // error: deleteError,
     loading: deletingImages,
   } = useRequest("DELETE");
 
@@ -335,8 +323,18 @@ export default function EditDesign({ params }: { params: { postId: string } }) {
           MAX_IMAGES
         );
 
-        // Set the updated previews
-        setImages(updatedPreviews);
+        if (awsImages.length > 0) {
+          const res = [...updatedPreviews];
+          awsOrder.forEach((index, i) => {
+            const src = awsImages[i];
+            res.splice(index, 0, { url: src, file: null });
+          });
+          setAwsImages([]);
+          setAwsOrder([]);
+          setImages(res);
+        } else {
+          setImages(updatedPreviews);
+        }
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -380,15 +378,15 @@ export default function EditDesign({ params }: { params: { postId: string } }) {
 
   const {
     res: tempImagesRes,
-    loading: tempImagesLoading,
+    // loading: tempImagesLoading,
     error: tempImagesError,
     fetchData: getTempImages,
   } = useRequest<string[]>("GET");
 
   const {
-    res: deleteTempRes,
-    loading: deletingTemp,
-    error: deleteTempError,
+    // res: deleteTempRes,
+    // loading: deletingTemp,
+    // error: deleteTempError,
     fetchData: deleteTempImages,
   } = useRequest("DELETE");
 
@@ -421,6 +419,9 @@ export default function EditDesign({ params }: { params: { postId: string } }) {
     [deleteTempImages, state.user]
   );
 
+  const [awsImages, setAwsImages] = useState<string[]>([]);
+  const [awsOrder, setAwsOrder] = useState<number[]>([]);
+
   useEffect(() => {
     if (
       sessionStorage.getItem("previewPost") !== null &&
@@ -434,6 +435,8 @@ export default function EditDesign({ params }: { params: { postId: string } }) {
         about: string;
         hasMulterImages: boolean;
         videos: string[];
+        awsImageOrder: number[];
+        awsImages: string[];
         shipParts: { part: Part; amount: number }[];
         username: string;
         tags: string[];
@@ -456,7 +459,15 @@ export default function EditDesign({ params }: { params: { postId: string } }) {
       setTags(previewTags);
       setAddedParts(previewPost.shipParts);
       if (previewPost.hasMulterImages) {
+        setAwsImages(previewPost.awsImages);
+        setAwsOrder(previewPost.awsImageOrder);
         getTempImages("", `/images/temp/${state.user.userId}`);
+      } else {
+        const imgs: UploadedImage[] = [];
+        previewPost.awsImages.forEach((image) =>
+          imgs.push({ url: image, file: null })
+        );
+        setImages(imgs);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -491,7 +502,7 @@ export default function EditDesign({ params }: { params: { postId: string } }) {
   function isValidYouTubeLink(link: string) {
     // Regular expression to match YouTube video URLs
     const regex =
-      /^(https?:\/\/)?(www\.)?(youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+      /^(https?:\/\/)?(www\.)?(youtube\.com\/(?:[^/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/;
     return regex.test(link);
   }
 
@@ -611,7 +622,10 @@ export default function EditDesign({ params }: { params: { postId: string } }) {
       if (
         title === originalPost.title &&
         about === originalPost.about &&
-        sanitizeHTML(editor?.getHTML() || "") === originalPost.description &&
+        (originalPost.description === ""
+          ? (editor?.getText() || "") === ""
+          : sanitizeHTML(editor?.getHTML() || "") ===
+            originalPost.description) &&
         sameTags &&
         sameImages &&
         sameVideos &&
@@ -697,9 +711,9 @@ export default function EditDesign({ params }: { params: { postId: string } }) {
   };
 
   const {
-    res: uploadTempImageRes,
-    loading: uploadingTempImage,
-    error: uploadingTempImageError,
+    // res: uploadTempImageRes,
+    // loading: uploadingTempImage,
+    // error: uploadingTempImageError,
     mutate: uploadTempImage,
   } = useRequest("POST", `/images/temp/${state.user?.userId}`);
 
@@ -761,17 +775,17 @@ export default function EditDesign({ params }: { params: { postId: string } }) {
     setYoutubeLinks(youtubeLinks.filter((link) => link !== removeLink));
   };
 
-  if (delayedLoading) {
+  if (!checkRes || checkLoading) {
     return (
-      <main className="flex min-h-screen flex-col items-center p-24 gap-2">
+      <main className="flex min-h-screen flex-col items-center py-24 lg:px-24 md:px-16 px-8 gap-2">
         <span className="loading loading-ring loading-lg" />
       </main>
     );
   }
 
-  if (!delayedLoading && !checkRes?.data) {
+  if (checkRes && !checkLoading && !checkRes.data) {
     return (
-      <main className="flex min-h-screen flex-col items-center p-24 gap-2">
+      <main className="flex min-h-screen flex-col items-center py-24 lg:px-24 md:px-16 px-8 gap-2">
         Not authorized
       </main>
     );
@@ -779,10 +793,13 @@ export default function EditDesign({ params }: { params: { postId: string } }) {
 
   return (
     <main
-      className="flex min-h-screen flex-col items-center p-24 gap-2"
+      className="flex min-h-screen flex-col items-center py-24 lg:px-24 md:px-16 px-8 gap-2"
       {...getRootProps()}
     >
-      <LinkModal editor={editor} />
+      <LinkModal
+        editor={editor}
+        link={editor?.getAttributes("link").href ?? ""}
+      />
       <ImageModal editor={editor} />
       <Button
         className="join-item btn-neutral text-white font-bold py-2 px-4 self-end"
@@ -805,16 +822,16 @@ export default function EditDesign({ params }: { params: { postId: string } }) {
             animate={{ opacity: 1, transition: { duration: 0.2 } }}
             exit={{ opacity: 0 }}
           >
-            <h1 className="text-5xl m-auto text-white">Drop images here ...</h1>
+            <h1 className="m-auto text-white">Drop images here ...</h1>
           </motion.div>
         )}
       </AnimatePresence>
-      <h1 className="text-2xl font-bold">Edit Ship Design</h1>
+      <h1>Edit Ship Design</h1>
       <form
         onSubmit={handleSubmit}
         className="flex flex-col items-center w-full gap-4"
       >
-        <div className="form-control w-1/2 max-w-lg">
+        <div className="form-control lg:w-1/3 md:w-1/2 w-full">
           <label className="label font-medium text-gray-600">
             <span className="label-text text-lg">Title</span>
           </label>
@@ -839,7 +856,7 @@ export default function EditDesign({ params }: { params: { postId: string } }) {
             )}
           </label>
         </div>
-        <div className="form-control w-2/3">
+        <div className="form-control lg:w-2/3 md:w-4/5 w-full">
           <label className="label font-medium text-gray-600">
             <span className="label-text text-lg">About this Design</span>
           </label>
@@ -902,7 +919,7 @@ export default function EditDesign({ params }: { params: { postId: string } }) {
             })}
           </div>
         </div>
-        <div className="form-control w-1/2">
+        <div className="form-control lg:w-2/3 md:w-4/5 w-full">
           <label className="label font-medium text-gray-600">
             <span className="label-text text-lg">Description</span>
           </label>
@@ -922,15 +939,15 @@ export default function EditDesign({ params }: { params: { postId: string } }) {
           </label>
         </div>
         <div className="form-control w-2/3 flex flex-col items-center gap-2">
-          <h2 className="text-2xl">Ship Parts</h2>
+          <h2>Ship Parts</h2>
           <Parts addedParts={addedParts} setAddedParts={setAddedParts} />
         </div>
         <div className="form-control w-full flex flex-col items-center gap-2">
-          <h2 className="text-2xl">Images</h2>
-          <h3>
+          <h2>Images</h2>
+          <p>
             Upload up to 5 images to showoff your design. Images must be less
             than 5 MB. Must upload at least 1 image. Drag to reorder images.
-          </h3>
+          </p>
           {error && <ErrorText text={error} />}
           {imageError && <ErrorText text={imageError} />}
           <InputImage
@@ -979,6 +996,7 @@ export default function EditDesign({ params }: { params: { postId: string } }) {
                           alt="edit"
                           width={35}
                           height={35}
+                          draggable={false}
                         />
                       </Button>
                       <Button className="btn-circle btn-disabled">
@@ -987,6 +1005,7 @@ export default function EditDesign({ params }: { params: { postId: string } }) {
                           alt="delete"
                           width={35}
                           height={35}
+                          draggable={false}
                         />
                       </Button>
                     </div>
@@ -996,7 +1015,7 @@ export default function EditDesign({ params }: { params: { postId: string } }) {
           </Reorder.Group>
         </div>
         <div className="form-control w-full flex flex-col items-center gap-2">
-          <h2 className="text-2xl">Videos</h2>
+          <h2>Videos</h2>
           <p>Link up to 12 YouTube videos to show off your design.</p>
           {linkError && <ErrorText text={linkError} />}
           <div>

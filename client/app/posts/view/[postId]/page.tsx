@@ -99,7 +99,7 @@ export default function ViewDesign({ params }: { params: { postId: string } }) {
 
   if (!res && error)
     return (
-      <main className="flex min-h-screen flex-col items-center p-24">
+      <main className="flex min-h-screen flex-col items-center py-24 lg:px-24 md:px-16 px-8">
         <div>Page does not exist</div>
       </main>
     );
@@ -107,7 +107,7 @@ export default function ViewDesign({ params }: { params: { postId: string } }) {
   const data = res?.data;
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-24 gap-4">
+    <main className="flex min-h-screen flex-col items-center py-24 lg:px-24 md:px-16 px-8 gap-4">
       <SubNav>
         <div></div>
         <div className="flex gap-2 items-center justify-center">
@@ -141,13 +141,11 @@ export default function ViewDesign({ params }: { params: { postId: string } }) {
           </Button>
         </div>
       </SubNav>
-      <div className="flex items-center flex-col" id="title">
-        <h1 className="text-2xl font-bold">
-          {data?.title || <Skeleton height={24} width={240} />}
-        </h1>
+      <div className="flex items-center flex-col gap-1" id="title">
+        <h1>{data?.title || <Skeleton height={24} width={240} />}</h1>
         {data ? (
           <Link href={`/users/view/${data.userId.id}/${data.userId.iv}`}>
-            by {data.username}
+            {data.username}
           </Link>
         ) : (
           <Skeleton height={16} width={200} />
@@ -223,26 +221,25 @@ export default function ViewDesign({ params }: { params: { postId: string } }) {
         id="images"
       >
         <Carousel
+          placeholders={[]}
           autoplay={false}
           images={data?.imageKeys || []}
           size="lg"
           preview
         />
       </div>
-      <h2 className="text-2xl font-bold" id="about">
-        About This Design
-      </h2>
+      <h2 id="about">About This Design</h2>
       {data ? (
-        <p className="w-2/3 text-center">{data.about}</p>
+        <div className="w-2/3 bg-white shadow rounded-lg p-2">
+          <p className="text-center">{data.about}</p>
+        </div>
       ) : (
         <Skeleton count={2} width={1000} />
       )}
       {data ? (
         data.description && (
           <>
-            <h2 className="text-2xl font-bold" id="description">
-              Description
-            </h2>
+            <h2 id="description">Description</h2>
             <div className="w-3/4">
               <Editor editable={false} editor={editor} />
             </div>
@@ -250,18 +247,14 @@ export default function ViewDesign({ params }: { params: { postId: string } }) {
         )
       ) : (
         <>
-          <h2 className="text-2xl font-bold" id="description">
-            Description
-          </h2>
+          <h2 id="description">Description</h2>
           <Skeleton count={5} width={1000} />
         </>
       )}
       {data ? (
         data.videos.length > 0 && (
           <>
-            <h2 className="text-2xl font-bold" id="videos">
-              Videos
-            </h2>
+            <h2 id="videos">Videos</h2>
             <div className="flex gap-4 w-full overflow-auto">
               {data.videos.map((video, i) => (
                 <div key={video + i} className="m-auto">
@@ -273,26 +266,20 @@ export default function ViewDesign({ params }: { params: { postId: string } }) {
         )
       ) : (
         <>
-          <h2 className="text-2xl font-bold" id="videos">
-            Videos
-          </h2>
+          <h2 id="videos">Videos</h2>
           <Skeleton height={405} width={720} borderRadius={0} />
         </>
       )}
       {data ? (
         data.shipParts && (
           <>
-            <h2 className="text-2xl font-bold" id="parts">
-              Ship Parts
-            </h2>
+            <h2 id="parts">Ship Parts</h2>
             <FinalPartsTable parts={data.shipParts} />
           </>
         )
       ) : (
         <>
-          <h2 className="text-2xl font-bold" id="parts">
-            Ship Parts
-          </h2>
+          <h2 id="parts">Ship Parts</h2>
           <FinalPartsTable parts={[]} />
         </>
       )}

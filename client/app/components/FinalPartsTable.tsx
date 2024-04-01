@@ -226,10 +226,10 @@ const FinalPartsTable = ({ parts }: Props) => {
   });
 
   return (
-    <div className="flex flex-col items-center w-4/5 gap-2">
+    <div className="flex flex-col lg:w-4/5 w-full gap-2 bg-white p-2 shadow rounded-lg overflow-auto">
       <div
         className={`max-h-[70vh] overflow-auto`}
-        style={{ height: `${rows.length * 90}px` }}
+        style={{ height: `${Math.max(rows.length * 90, 90)}px` }}
         ref={tableContainerRef}
       >
         <div

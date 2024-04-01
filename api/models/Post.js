@@ -1,6 +1,7 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
+import mongoose_fuzzy_searching from "mongoose-fuzzy-searching";
+
 const Schema = mongoose.Schema;
-const mongoose_fuzzy_searching = require("mongoose-fuzzy-searching");
 
 const PostSchema = Schema({
   title: {
@@ -32,6 +33,9 @@ const PostSchema = Schema({
   tags: {
     type: [String],
     required: true,
+  },
+  placeholderSVG: {
+    type: String,
   },
   userId: {
     type: {
@@ -66,4 +70,4 @@ PostSchema.methods.decrementLikes = function () {
   return this.save();
 };
 
-module.exports = mongoose.model("Post", PostSchema);
+export default mongoose.model("Post", PostSchema);

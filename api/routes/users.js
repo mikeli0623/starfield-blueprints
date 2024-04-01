@@ -1,14 +1,15 @@
-const express = require("express");
-const router = express.Router();
-const {
+import express from "express";
+import {
   deleteUser,
   updateUser,
   getUser,
   getMe,
   checkIsUser,
   updatePassword,
-} = require("../controllers/user");
-const { verifyToken } = require("../utils/verifyToken");
+} from "../controllers/user.js";
+import { verifyToken } from "../utils/verifyToken.js";
+
+const router = express.Router();
 
 router.put("/:id/:iv", verifyToken, updateUser);
 router.patch("/updatePassword", verifyToken, updatePassword);
@@ -17,4 +18,4 @@ router.get("/find/:id/:iv", getUser);
 router.get("/check/:id/:iv", verifyToken, checkIsUser);
 router.get("/me", verifyToken, getMe);
 
-module.exports = router;
+export default router;

@@ -22,8 +22,10 @@
 
   padding: 12px 20px;
 
-  > * + * {
-    margin-top: 0.75em;
+  .node-reactComponent {
+    width: fit-content;
+    height: fit-content;
+    display: inline;
   }
 
   a {
@@ -42,28 +44,6 @@
   ul,
   ol {
     padding: 0 1rem;
-  }
-
-  h1 {
-    font-size: 34px;
-  }
-
-  h2 {
-    font-size: 30px;
-  }
-
-  h3 {
-    font-size: 24px;
-  }
-
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    line-height: 1.1;
-    font-weight: bold;
   }
 
   code {

@@ -1,6 +1,8 @@
-const crypto = require("crypto");
+import crypto from "crypto";
+import dotenv from "dotenv";
+dotenv.config();
 
-const encrypt = (id, iv) => {
+export const encrypt = (id, iv) => {
   const key = Buffer.from(process.env.CRYPTO_KEY, "base64");
   const bufferIV = Buffer.from(iv, "hex");
   const cipher = crypto.createCipheriv("aes-256-cbc", key, bufferIV);
@@ -9,7 +11,7 @@ const encrypt = (id, iv) => {
   return encrypted;
 };
 
-const decrypt = (id, iv) => {
+export const decrypt = (id, iv) => {
   const key = Buffer.from(process.env.CRYPTO_KEY, "base64");
   const bufferIV = Buffer.from(iv, "hex");
   const decipher = crypto.createDecipheriv("aes-256-cbc", key, bufferIV);
@@ -17,9 +19,4 @@ const decrypt = (id, iv) => {
   decrypted += decipher.final("utf-8");
 
   return decrypted;
-};
-
-module.exports = {
-  encrypt,
-  decrypt,
 };

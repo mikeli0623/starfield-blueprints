@@ -25,12 +25,15 @@ const Featured = () => {
   }, [featuredRes]);
 
   return (
-    <div className="w-full h-fit flex flex-col justify-center items-center">
-      <h1 className="text-3xl mb-4 font-bold">Designs of the Week</h1>
+    <div className="w-full h-fit flex flex-col justify-center items-center gap-4">
+      <h1>Designs of the Week</h1>
       <Carousel
         size="md"
         autoplay={true}
         images={images}
+        placeholders={
+          featuredRes?.data.map((post) => post.placeholderSVG) ?? []
+        }
         hoverProps={featuredRes?.data}
       />
     </div>

@@ -102,8 +102,8 @@ export default function Register() {
   }, [errReq]);
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-24 gap-2">
-      <h1 className="text-4xl">Register</h1>
+    <main className="flex min-h-screen flex-col items-center py-24 lg:px-24 md:px-16 px-8 gap-2">
+      <h1>Register</h1>
       <form
         onSubmit={handleSubmit}
         className="flex flex-col items-center gap-2"

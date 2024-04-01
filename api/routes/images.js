@@ -1,17 +1,22 @@
-const express = require("express");
-const router = express.Router();
-const {
+import express from "express";
+import {
   uploadImages,
   deleteImages,
   getImages,
   uploadTempImages,
   getTempImages,
   deleteTempImages,
-} = require("../controllers/image");
-const { verifyToken } = require("../utils/verifyToken");
-const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
+} from "../controllers/image.js";
+import { verifyToken } from "../utils/verifyToken.js";
+import multer from "multer";
+import fs from "fs";
+import { fileURLToPath } from "url";
+import path from "path";
+
+const router = express.Router();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const fileFilter = (req, file, cb) => {
   if (
@@ -63,4 +68,4 @@ router.get("/temp/:id", verifyToken, getTempImages);
 router.delete("/temp/:id", verifyToken, deleteTempImages);
 router.delete("/:keys", verifyToken, deleteImages);
 
-module.exports = router;
+export default router;

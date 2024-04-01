@@ -196,7 +196,7 @@ export default function ViewUser({
 
   if (!userRes && userError) {
     return (
-      <main className="flex min-h-screen flex-col items-center p-24">
+      <main className="flex min-h-screen flex-col items-center py-24 lg:px-24 md:px-16 px-8">
         User does not exist
       </main>
     );
@@ -205,7 +205,7 @@ export default function ViewUser({
   const data = userRes?.data;
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-24 gap-4">
+    <main className="flex min-h-screen flex-col items-center py-24 lg:px-24 md:px-16 px-8 gap-4">
       {isSameUser && (
         <DeleteModal
           type="design"
@@ -225,7 +225,7 @@ export default function ViewUser({
           <p>All designs created by the account will still be available.</p>
         </DeleteModal>
       )}
-      <h1 className="text-2xl font-bold">
+      <h1>
         {!data ? (
           <Skeleton width={300} height={"24px"} />
         ) : isSameUser ? (

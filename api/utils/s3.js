@@ -1,13 +1,14 @@
-const {
+import {
   PutObjectCommand,
   DeleteObjectCommand,
   S3Client,
   ListObjectsV2Command,
   GetObjectCommand,
-} = require("@aws-sdk/client-s3");
-const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
-
-const { v4: uuidv4 } = require("uuid");
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { v4 as uuidv4 } from "uuid";
+import dotenv from "dotenv";
+dotenv.config();
 
 const s3 = new S3Client({ region: "us-east-1" });
 const S3_BUCKET = process.env.S3_BUCKET;
@@ -93,8 +94,4 @@ const getPresignedUrls = async (postId) => {
   }
 };
 
-module.exports = {
-  uploadToS3,
-  deleteFromS3,
-  getPresignedUrls,
-};
+export { uploadToS3, deleteFromS3, getPresignedUrls };

@@ -11,7 +11,7 @@ interface PostProps {
 const Post = ({ post, handleLike = null, liked = false }: PostProps) => {
   return (
     <motion.div
-      className="shadow-xl rounded-b-2xl"
+      className="shadow-xl rounded-b-2xl w-full h-fit"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}

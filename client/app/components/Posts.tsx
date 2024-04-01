@@ -1,7 +1,6 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import SearchGroup from "./SearchGroup";
-import useRequest from "../hooks/useRequest";
 import { motion, AnimatePresence } from "framer-motion";
 import { PostResponse, TagOptions } from "../util/types";
 import Post from "./Post";
@@ -9,14 +8,20 @@ import { useAuth } from "../context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useDesigns } from "../context/DesignsContext";
 import PostSkeleton from "./skeletons/PostSkeleton";
-import { DELAYED_LOADING } from "../util/constants";
+import { API_URL, PAGE_SIZE } from "../util/constants";
+import { useInView } from "react-intersection-observer";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
+import { usePageVisibility } from "react-page-visibility";
 
 const Posts = () => {
+  const queryClient = useQueryClient();
+
   const [search, setSearch] = useState<string>("");
-  const { res, loading, error, fetchData } = useRequest<PostResponse[]>(
-    "GET",
-    `/posts`
-  );
+
+  const { ref, inView } = useInView();
+
+  const [query, setQuery] = useState<string>("");
 
   const [tagOptions, setTagOptions] = useState<TagOptions>({
     unmodded: true,
@@ -27,6 +32,7 @@ const Posts = () => {
   const [time, setTime] = useState<string>("allTime");
   const [sort, setSort] = useState<string>("likes");
 
+  // useEffect to update the query when search, tagOptions, sort, or time changes
   useEffect(() => {
     let query = `?title=${search}`;
     const excludedTags: string[] = [];
@@ -36,8 +42,54 @@ const Posts = () => {
     });
     if (excludedTags.length > 0) query += `&excludedTags=${excludedTags}`;
     query += `&sort=${sort}&time=${time}`;
-    fetchData(query);
-  }, [search, tagOptions, fetchData, sort, time]);
+
+    // Invalidate and refetch the data when the query changes
+    // queryClient.invalidateQueries({ queryKey: ["posts", query] });
+
+    setQuery(query);
+  }, [queryClient, search, sort, tagOptions, time]);
+
+  const {
+    status,
+    data,
+    error,
+    isFetching,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+  } = useInfiniteQuery<PostResponse[]>({
+    queryKey: ["posts", query],
+    queryFn: async ({ pageParam }) => {
+      const res = await axios.get(
+        `${API_URL}/posts${query}&page=${pageParam}&pageSize=${PAGE_SIZE}`
+      );
+      return res.data;
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      return lastPage.length > 0 ? (lastPage[0].page ?? 0) + 1 : undefined;
+    },
+  });
+
+  const isVisible = usePageVisibility();
+
+  const [lostVisibility, setLostVisiblity] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!isVisible) {
+      setLostVisiblity(true);
+    }
+    if (isVisible)
+      setTimeout(() => {
+        setLostVisiblity(false);
+      }, 500);
+  }, [isVisible]);
+
+  useEffect(() => {
+    if (inView && isVisible && !lostVisibility) {
+      fetchNextPage();
+    }
+  }, [fetchNextPage, inView, isVisible, lostVisibility]);
 
   const handleSearchChange = (value: string | number) => {
     setSearch(String(value));
@@ -59,18 +111,8 @@ const Posts = () => {
     }
   };
 
-  const [delayedLoading, setDelayedLoading] = useState<boolean>(true);
-
-  useEffect(() => {
-    let timeout: ReturnType<typeof setTimeout> | null = null;
-    if (res && !loading) {
-      timeout = setTimeout(() => setDelayedLoading(false), DELAYED_LOADING);
-    }
-    return () => clearTimeout(timeout!);
-  }, [res, loading]);
-
   return (
-    <div className="bg-secondary w-full h-screen p-6 flex flex-col items-center">
+    <div className="bg-secondary w-full min-h-[600px] h-fit p-6 flex flex-col items-center gap-4">
       <SearchGroup
         searchValue={search}
         handleSearchChange={handleSearchChange}
@@ -82,7 +124,81 @@ const Posts = () => {
         setTagOptions={setTagOptions}
       />
       <AnimatePresence>
-        <div className="mt-2 w-full grid grid-cols-4 gap-4">
+        <motion.div className="w-full grid lg:grid-cols-5 md:grid-cols-3 grid-cols-2 gap-4">
+          {status === "pending" ? (
+            Array(4)
+              .fill(null)
+              .map((_, i) => (
+                <motion.span
+                  key={i}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <PostSkeleton />
+                </motion.span>
+              ))
+          ) : status === "error" ? (
+            <span>Error: {error.message}</span>
+          ) : (
+            <>
+              {data.pages.map((page, pageIndex) => (
+                <React.Fragment key={pageIndex}>
+                  {page.map((post) => (
+                    <Post
+                      key={post._id}
+                      post={post}
+                      handleLike={handleLike}
+                      liked={isDesignLiked(post._id)}
+                    />
+                  ))}
+                </React.Fragment>
+              ))}
+              {hasNextPage && !isFetchingNextPage && (
+                <motion.div
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="col-span-4 m-auto"
+                >
+                  <button ref={ref} onClick={() => fetchNextPage()}>
+                    {isFetchingNextPage ? (
+                      <span className="loading loading-spinner loading-lg" />
+                    ) : hasNextPage ? (
+                      "Load More"
+                    ) : (
+                      ""
+                    )}
+                  </button>
+                </motion.div>
+              )}
+              {isFetching && !isFetchingNextPage
+                ? Array(4)
+                    .fill(null)
+                    .map((_, i) => (
+                      <motion.span
+                        key={i}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                      >
+                        <PostSkeleton />
+                      </motion.span>
+                    ))
+                : null}
+            </>
+          )}
+        </motion.div>
+      </AnimatePresence>
+      {/* <SearchGroup
+        searchValue={search}
+        handleSearchChange={handleSearchChange}
+        time={time}
+        setTime={setTime}
+        sort={sort}
+        setSort={setSort}
+        tagOptions={tagOptions}
+        setTagOptions={setTagOptions}
+      />
+      <AnimatePresence>
+        <div className="w-full grid grid-cols-4 gap-4">
           {delayedLoading ? (
             Array(12)
               .fill(null)
@@ -95,10 +211,10 @@ const Posts = () => {
                   <PostSkeleton />
                 </motion.span>
               ))
-          ) : res?.data.length === 0 ? (
+          ) : data?.length === 0 ? (
             <div>No posts</div>
           ) : (
-            res?.data.map((post) => {
+            data?.map((post) => {
               return (
                 <Post
                   key={post._id}
@@ -108,9 +224,23 @@ const Posts = () => {
                 />
               );
             })
+            // Array(100)
+            //   .fill(null)
+            //   .map(() =>
+            //     testData.map((post) => {
+            //       return (
+            //         <Post
+            //           key={post._id}
+            //           post={post}
+            //           handleLike={handleLike}
+            //           liked={isDesignLiked(post._id)}
+            //         />
+            //       );
+            //     })
+            //   )
           )}
         </div>
-      </AnimatePresence>
+      </AnimatePresence> */}
     </div>
   );
 };

@@ -134,7 +134,7 @@ export default function PreviewDesign() {
   }, [editor, post]);
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-24 gap-4">
+    <main className="flex min-h-screen flex-col items-center py-24 lg:px-24 md:px-16 px-8 gap-4">
       <SubNav>
         <Button className="btn-secondary m-auto" handleClick={handleBack}>
           Back
@@ -155,7 +155,7 @@ export default function PreviewDesign() {
       {view === "full" && (
         <div className="w-full h-full flex flex-col items-center gap-4">
           <div className="flex items-center flex-col gap-2">
-            <h1 className="text-2xl font-bold">{post.title || "Untitled"}</h1>
+            <h1>{post.title || "Untitled"}</h1>
             by {post.username}
           </div>
           <div className="flex gap-2">
@@ -179,23 +179,24 @@ export default function PreviewDesign() {
             <Carousel
               autoplay={false}
               images={orderImages()}
+              placeholders={[]}
               size="lg"
               preview
               img_prefix=""
               emptyText="Not seeing your images? Click the `Preview` button on the previous page after they are uploaded."
             />
           </div>
-          <h2 className="text-2xl font-bold">About This Design</h2>
+          <h2>About This Design</h2>
           <div className="w-2/3">
             <p className="max-h-32 text-[15px] text-center break-words">
               {post.about || "No about"}
             </p>
           </div>
-          <h2 className="text-2xl font-bold">Description</h2>
+          <h2>Description</h2>
           <div className="w-3/4">
             <Editor editable={false} editor={editor} />
           </div>
-          <h2 className="text-2xl font-bold">Videos</h2>
+          <h2>Videos</h2>
           <div className="flex gap-4 w-full overflow-auto">
             {post.videos.length > 0 ? (
               <>
@@ -209,7 +210,7 @@ export default function PreviewDesign() {
               <p className="m-auto">No videos</p>
             )}
           </div>
-          <h2 className="text-2xl font-bold">Ship Parts</h2>
+          <h2>Ship Parts</h2>
           <FinalPartsTable
             parts={post.shipParts.map((part) => {
               return { partName: part.part.partName, amount: part.amount };

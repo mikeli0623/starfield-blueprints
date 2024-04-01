@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { useCallback } from "react";
+import React from "react";
 
 const iconSize = 24;
 const btnClassName = "btn btn-square btn-sm";
@@ -34,25 +34,7 @@ const Toolbar = ({ editor, editLink, editImageLink }: Props) => {
           alt="paragraph"
           width={iconSize}
           height={iconSize}
-        />
-      </button>
-      <button
-        onClick={(e) => {
-          e.preventDefault();
-          editor.chain().focus().toggleHeading({ level: 1 }).run();
-        }}
-        className={`${btnClassName} ${
-          editor.isActive("heading", { level: 1 }) ? btnActive : btnInactive
-        }`}
-      >
-        <Image
-          src={"/editor/h1.svg"}
-          className={`${
-            editor.isActive("heading", { level: 1 }) ? "svg-white" : ""
-          }`}
-          alt="h1"
-          width={iconSize}
-          height={iconSize}
+          draggable={false}
         />
       </button>
       <button
@@ -65,13 +47,14 @@ const Toolbar = ({ editor, editLink, editImageLink }: Props) => {
         }`}
       >
         <Image
-          src={"/editor/h2.svg"}
+          src={"/editor/h1.svg"}
           className={`${
             editor.isActive("heading", { level: 2 }) ? "svg-white" : ""
           }`}
-          alt="h2"
+          alt="h1"
           width={iconSize}
           height={iconSize}
+          draggable={false}
         />
       </button>
       <button
@@ -84,13 +67,34 @@ const Toolbar = ({ editor, editLink, editImageLink }: Props) => {
         }`}
       >
         <Image
-          src={"/editor/h3.svg"}
+          src={"/editor/h2.svg"}
           className={`${
             editor.isActive("heading", { level: 3 }) ? "svg-white" : ""
+          }`}
+          alt="h2"
+          width={iconSize}
+          height={iconSize}
+          draggable={false}
+        />
+      </button>
+      <button
+        onClick={(e) => {
+          e.preventDefault();
+          editor.chain().focus().toggleHeading({ level: 4 }).run();
+        }}
+        className={`${btnClassName} ${
+          editor.isActive("heading", { level: 4 }) ? btnActive : btnInactive
+        }`}
+      >
+        <Image
+          src={"/editor/h3.svg"}
+          className={`${
+            editor.isActive("heading", { level: 4 }) ? "svg-white" : ""
           }`}
           alt="h3"
           width={iconSize}
           height={iconSize}
+          draggable={false}
         />
       </button>
       <button
@@ -108,6 +112,7 @@ const Toolbar = ({ editor, editLink, editImageLink }: Props) => {
           alt="bold"
           width={iconSize}
           height={iconSize}
+          draggable={false}
         />
       </button>
       <button
@@ -125,6 +130,7 @@ const Toolbar = ({ editor, editLink, editImageLink }: Props) => {
           alt="italic"
           width={iconSize}
           height={iconSize}
+          draggable={false}
         />
       </button>
       <button
@@ -142,6 +148,7 @@ const Toolbar = ({ editor, editLink, editImageLink }: Props) => {
           alt="underline"
           width={iconSize}
           height={iconSize}
+          draggable={false}
         />
       </button>
       <button
@@ -160,6 +167,7 @@ const Toolbar = ({ editor, editLink, editImageLink }: Props) => {
           alt="strikethrough"
           width={iconSize}
           height={iconSize}
+          draggable={false}
         />
       </button>
       <button
@@ -177,6 +185,7 @@ const Toolbar = ({ editor, editLink, editImageLink }: Props) => {
           alt="blockquote"
           width={iconSize}
           height={iconSize}
+          draggable={false}
         />
       </button>
       <button
@@ -196,6 +205,7 @@ const Toolbar = ({ editor, editLink, editImageLink }: Props) => {
           alt="align-left"
           width={iconSize}
           height={iconSize}
+          draggable={false}
         />
       </button>
       <button
@@ -215,6 +225,7 @@ const Toolbar = ({ editor, editLink, editImageLink }: Props) => {
           alt="align-center"
           width={iconSize}
           height={iconSize}
+          draggable={false}
         />
       </button>
       <button
@@ -234,6 +245,7 @@ const Toolbar = ({ editor, editLink, editImageLink }: Props) => {
           alt="align-right"
           width={iconSize}
           height={iconSize}
+          draggable={false}
         />
       </button>
       <button
@@ -253,6 +265,7 @@ const Toolbar = ({ editor, editLink, editImageLink }: Props) => {
           alt="align-justify"
           width={iconSize}
           height={iconSize}
+          draggable={false}
         />
       </button>
       <button
@@ -270,6 +283,7 @@ const Toolbar = ({ editor, editLink, editImageLink }: Props) => {
           alt="list-bullet"
           width={iconSize}
           height={iconSize}
+          draggable={false}
         />
       </button>
       <button
@@ -287,6 +301,7 @@ const Toolbar = ({ editor, editLink, editImageLink }: Props) => {
           alt="list-numbered"
           width={iconSize}
           height={iconSize}
+          draggable={false}
         />
       </button>
       <button
@@ -301,6 +316,7 @@ const Toolbar = ({ editor, editLink, editImageLink }: Props) => {
           alt="horizontal-rule"
           width={iconSize}
           height={iconSize}
+          draggable={false}
         />
       </button>
       <button
@@ -315,6 +331,7 @@ const Toolbar = ({ editor, editLink, editImageLink }: Props) => {
           alt="page break"
           width={iconSize}
           height={iconSize}
+          draggable={false}
         />
       </button>
       <button onClick={editImageLink} className={`${btnClassName} btn-ghost`}>
@@ -323,6 +340,7 @@ const Toolbar = ({ editor, editLink, editImageLink }: Props) => {
           alt="add photo"
           width={iconSize}
           height={iconSize}
+          draggable={false}
         />
       </button>
       <button
@@ -336,24 +354,9 @@ const Toolbar = ({ editor, editLink, editImageLink }: Props) => {
           alt="set link"
           width={iconSize}
           height={iconSize}
+          draggable={false}
         />
       </button>
-      {/* <button
-        onClick={(e) => {
-          e.preventDefault();
-          editor.chain().focus().unsetLink().run();
-        }}
-        disabled={!editor.isActive("link")}
-        className={`${btnClassName} btn-ghost`}
-      >
-        <Image
-          src={"/editor/link-off.svg"}
-          className={`${!editor.isActive("link") ? "svg-muted" : ""}`}
-          alt="unset link"
-          width={iconSize}
-          height={iconSize}
-        />
-      </button> */}
       <button
         onClick={(e) => {
           e.preventDefault();
@@ -367,6 +370,7 @@ const Toolbar = ({ editor, editLink, editImageLink }: Props) => {
           alt="undo"
           width={iconSize}
           height={iconSize}
+          draggable={false}
           className={`${
             !editor.can().chain().focus().undo().run() ? "svg-muted" : ""
           }`}
@@ -385,6 +389,7 @@ const Toolbar = ({ editor, editLink, editImageLink }: Props) => {
           alt="redo"
           width={iconSize}
           height={iconSize}
+          draggable={false}
           className={`${
             !editor.can().chain().focus().redo().run() ? "svg-muted" : ""
           }`}

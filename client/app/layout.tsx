@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Orbitron } from "next/font/google";
 import "./globals.css";
-import "./editor.scss";
+import "./css/editor.scss";
 import { AuthProvider } from "./context/AuthContext";
 import Nav from "./components/Nav";
 import { Toaster } from "react-hot-toast";

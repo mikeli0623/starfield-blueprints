@@ -35,9 +35,9 @@ const DeleteModal = ({ type, children, item, handleDelete }: Props) => {
         </form>
         <h3 className="font-bold text-lg truncate">Deleting {item.name}</h3>
         {children}
-        <h3 className="my-2 font-bold">
+        <p className="my-2 font-bold">
           Enter {titleMap[type]} below to confirm.
-        </h3>
+        </p>
         <div className="join">
           <input
             type="text"

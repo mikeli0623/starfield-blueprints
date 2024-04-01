@@ -4,11 +4,21 @@ interface Props {
   children: ReactNode;
   className?: string;
   handleClick?: (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
+  disabled?: boolean;
 }
 
-const Button = ({ children, className, handleClick = () => {} }: Props) => {
+const Button = ({
+  children,
+  className,
+  handleClick = () => {},
+  disabled = false,
+}: Props) => {
   return (
-    <button className={`btn ${className}`} onClick={handleClick}>
+    <button
+      className={`btn ${className}`}
+      onClick={handleClick}
+      disabled={disabled}
+    >
       {children}
     </button>
   );

@@ -1,10 +1,17 @@
-const express = require("express");
-const mongoose = require("mongoose");
-require("dotenv/config");
-const cors = require("cors");
-const cookieParser = require("cookie-parser");
-const path = require("path");
+import express from "express";
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+import { fileURLToPath } from "url";
+import path from "path";
 
+import userRoute from "./routes/users.js";
+import postRoute from "./routes/posts.js";
+import authRoute from "./routes/auth.js";
+import imageRoute from "./routes/images.js";
+
+dotenv.config();
 const app = express();
 
 app.use(
@@ -15,6 +22,8 @@ app.use(
 );
 app.use(cookieParser());
 app.use(express.json());
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 app.use("/api", express.static(path.join(__dirname, "api")));
 
 mongoose.connection.on("disconnected", () => {
@@ -33,16 +42,9 @@ const connect = async () => {
   }
 };
 
-const userRoute = require("./routes/users");
 app.use("/api/users", userRoute);
-
-const postRoute = require("./routes/posts");
 app.use("/api/posts", postRoute);
-
-const authRoute = require("./routes/auth");
 app.use("/api/auth", authRoute);
-
-const imageRoute = require("./routes/images");
 app.use("/api/images", imageRoute);
 
 app.use((err, req, res, next) => {

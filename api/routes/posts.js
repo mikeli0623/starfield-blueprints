@@ -1,6 +1,5 @@
-const express = require("express");
-const router = express.Router();
-const {
+import express from "express";
+import {
   deletePost,
   updatePost,
   likePost,
@@ -10,8 +9,10 @@ const {
   getFeatured,
   createPost,
   checkUser,
-} = require("../controllers/post");
-const { verifyToken } = require("../utils/verifyToken");
+} from "../controllers/post.js";
+import { verifyToken } from "../utils/verifyToken.js";
+
+const router = express.Router();
 
 router.post("/", verifyToken, createPost);
 router.put("/:id", verifyToken, updatePost);
@@ -23,4 +24,4 @@ router.get("/multi", getMultiPosts);
 router.get("/featured", getFeatured);
 router.get("/checkUser/:id", verifyToken, checkUser);
 
-module.exports = router;
+export default router;

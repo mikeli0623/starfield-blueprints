@@ -32,7 +32,7 @@ const ImagePreview = ({
       className="border border-black w-full h-full flex items-center relative m-4 z-10 flex-col"
       drag="x"
     >
-      <div className="w-full h-3/4 relative">
+      <div className="w-full h-3/4 relative cursor-grab active:cursor-grabbing">
         <Image
           src={image.url}
           alt="user uploaded image"

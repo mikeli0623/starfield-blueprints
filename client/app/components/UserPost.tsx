@@ -22,7 +22,7 @@ const UserPost = ({
   liked,
 }: UserPostProps) => {
   return (
-    <div className="flex flex-col m-4 justify-between bg-slate-300 rounded-b-2xl shadow-xl">
+    <div className="flex flex-col justify-between bg-slate-300 rounded-b-2xl shadow-xl">
       <PostCard post={post} minimal liked={liked} handleLike={handleLike} />
       <div className="flex p-4 items-center justify-evenly bg-slate-300 rounded-b-2xl grow">
         <Button

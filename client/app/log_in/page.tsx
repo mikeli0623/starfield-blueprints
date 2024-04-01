@@ -101,7 +101,7 @@ export default function Register() {
 
   return (
     <main className="flex min-h-screen flex-col items-center p-24 gap-2">
-      <h1 className="text-4xl">Log In</h1>
+      <h1>Log In</h1>
       <form
         onSubmit={handleSubmit}
         className="flex flex-col items-center gap-2"

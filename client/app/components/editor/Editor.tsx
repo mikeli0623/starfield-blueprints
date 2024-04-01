@@ -45,7 +45,7 @@ const Editor = ({ editable = true, editor, error = false }: Props) => {
           className="flex items-center gap-2 p-2 rounded-lg bg-white border-2"
           tippyOptions={{ duration: 150 }}
           editor={editor}
-          shouldShow={({ editor, view, state, oldState, from, to }) => {
+          shouldShow={({ editor }) => {
             // only show the bubble menu for links.
             return editor.isActive("link");
           }}
@@ -65,7 +65,10 @@ const Editor = ({ editable = true, editor, error = false }: Props) => {
           editImageLink={editImageLink}
         />
       )}
-      <EditorContent editor={editor} className={`w-full border-t-2 `} />
+      <EditorContent
+        editor={editor}
+        className={`w-full ${editable ? "border-t-2" : ""}`}
+      />
     </div>
   );
 };

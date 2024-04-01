@@ -96,7 +96,6 @@ export default function AddDesign() {
       Link.extend({
         inclusive: false,
       }).configure({
-        protocols: ["ftp", "mailto"],
         openOnClick: false,
       }),
       CharacterCount.configure({
@@ -276,15 +275,15 @@ export default function AddDesign() {
 
   const {
     res: tempImagesRes,
-    loading: tempImagesLoading,
+    // loading: tempImagesLoading,
     error: tempImagesError,
     fetchData: getTempImages,
   } = useRequest<string[]>("GET");
 
   const {
-    res: deleteTempRes,
-    loading: deletingTemp,
-    error: deleteTempError,
+    // res: deleteTempRes,
+    // loading: deletingTemp,
+    // error: deleteTempError,
     fetchData: deleteTempImages,
   } = useRequest("DELETE");
 
@@ -378,7 +377,7 @@ export default function AddDesign() {
   function isValidYouTubeLink(link: string) {
     // Regular expression to match YouTube video URLs
     const regex =
-      /^(https?:\/\/)?(www\.)?(youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+      /^(https?:\/\/)?(www\.)?(youtube\.com\/(?:[^/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/;
     return regex.test(link);
   }
 
@@ -471,7 +470,12 @@ export default function AddDesign() {
   // update post with image keys
   useEffect(() => {
     if (!uploading && !imageUploading && postRes && imageRes && postId) {
-      updatePost({ imageKeys: imageRes.data.keys }, `/posts/${postId}`);
+      updatePost(
+        {
+          imageKeys: imageRes.data.keys,
+        },
+        `/posts/${postId}`
+      );
     }
   }, [uploading, imageUploading, postRes, imageRes, postId, updatePost]);
 
@@ -530,9 +534,9 @@ export default function AddDesign() {
   };
 
   const {
-    res: uploadTempImageRes,
-    loading: uploadingTempImage,
-    error: uploadingTempImageError,
+    // res: uploadTempImageRes,
+    // loading: uploadingTempImage,
+    // error: uploadingTempImageError,
     mutate: uploadTempImage,
   } = useRequest("POST", `/images/temp/${state.user?.userId}`);
 
@@ -583,11 +587,14 @@ export default function AddDesign() {
 
   return (
     <main
-      className="flex min-h-screen flex-col items-center p-24 gap-4 outline-none"
+      className="flex min-h-screen flex-col items-center py-24 lg:px-24 md:px-16 px-8 gap-4 outline-none"
       {...getRootProps()}
     >
       <ImageModal editor={editor} />
-      <LinkModal editor={editor} />
+      <LinkModal
+        editor={editor}
+        link={editor?.getAttributes("link").href ?? ""}
+      />
       <SubNav>
         <div></div>
         <div className="flex gap-2 items-center justify-center">
@@ -635,11 +642,11 @@ export default function AddDesign() {
             animate={{ opacity: 1, transition: { duration: 0.2 } }}
             exit={{ opacity: 0 }}
           >
-            <h1 className="text-5xl m-auto text-white">Drop images here ...</h1>
+            <h1 className="m-auto text-white">Drop images here ...</h1>
           </motion.div>
         )}
       </AnimatePresence>
-      <h1 className="text-2xl font-bold">Upload Ship Design</h1>
+      <h1>Upload Ship Design</h1>
       <form
         onSubmit={handleSubmit}
         className="flex flex-col items-center w-full gap-4"
@@ -652,7 +659,7 @@ export default function AddDesign() {
             type="text"
             value={title}
             onChange={handleTitleChange}
-            className={`bg-white input input-bordered shadow w-full ${
+            className={`bg-white input input-bordered shadow w-full text-lg ${
               titleProfanity ? "input-error" : ""
             }`}
             placeholder="Enter a title"
@@ -676,7 +683,7 @@ export default function AddDesign() {
           <textarea
             value={about}
             onChange={handleAboutChange}
-            className={`textarea textarea-bordered bg-white shadow w-full ${
+            className={`textarea textarea-bordered bg-white shadow w-full text-lg ${
               aboutProfanity ? "textarea-error" : ""
             }`}
             placeholder="This ship is awesome!"
@@ -749,15 +756,11 @@ export default function AddDesign() {
           </label>
         </div>
         <div className="form-control lg:w-2/3 md:w-4/5 w-full flex flex-col items-center gap-2">
-          <h2 className="text-2xl" id="parts">
-            Ship Parts
-          </h2>
+          <h2 id="parts">Ship Parts</h2>
           <Parts addedParts={addedParts} setAddedParts={setAddedParts} />
         </div>
         <div className="form-control w-full flex flex-col items-center gap-2">
-          <h2 className="text-2xl" id="images">
-            Images
-          </h2>
+          <h2 id="images">Images</h2>
           <p>
             Upload up to 5 images to show off your design. Images must be less
             than 5 MB. Must upload at least 1 image. Drag to reorder images.
@@ -810,6 +813,7 @@ export default function AddDesign() {
                           alt="edit"
                           width={35}
                           height={35}
+                          draggable={false}
                         />
                       </Button>
                       <Button className="btn-circle btn-disabled">
@@ -818,6 +822,7 @@ export default function AddDesign() {
                           alt="delete"
                           width={35}
                           height={35}
+                          draggable={false}
                         />
                       </Button>
                     </div>
@@ -827,9 +832,7 @@ export default function AddDesign() {
           </Reorder.Group>
         </div>
         <div className="form-control w-full flex flex-col items-center gap-2">
-          <h2 className="text-2xl" id="videos">
-            Videos
-          </h2>
+          <h2 id="videos">Videos</h2>
           <p>Link up to 12 YouTube videos to show off your design.</p>
           {linkError && <ErrorText text={linkError} />}
           <div>

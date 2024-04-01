@@ -2,7 +2,11 @@
 import React, { useEffect } from "react";
 import Featured from "./components/Featured";
 import Posts from "./components/Posts";
-import Test from "./components/Test";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
+
+const queryClient = new QueryClient();
 
 export default function Home() {
   useEffect(() => {
@@ -10,10 +14,11 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="flex flex-col items-center p-24">
-      <Featured />
-      <Posts />
-      {/* <Test /> */}
-    </main>
+    <QueryClientProvider client={queryClient}>
+      <main className="flex flex-col items-center py-24 lg:px-24 md:px-16 px-8">
+        <Featured />
+        <Posts />
+      </main>
+    </QueryClientProvider>
   );
 }

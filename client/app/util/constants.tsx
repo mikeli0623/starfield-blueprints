@@ -7,6 +7,7 @@ import {
 } from "obscenity";
 
 import parseJSON from "./parseJSON";
+import { PostResponse } from "./types";
 export const json = new parseJSON();
 
 const myDataset = new DataSet<{ originalWord: string }>()
@@ -25,15 +26,33 @@ export const matcher = new RegExpMatcher({
 export const API_URL = "http://localhost:8080/api";
 export const IMG_URL = "https://starfield-blueprints.s3.amazonaws.com/";
 
-export const DELAYED_LOADING = 200;
-
 export const validImageTypes = [
   "image/png",
   "image/jpg",
   "image/jpeg",
   "image/webp",
 ];
-export const MAX_DESCRIPTION_LENGTH = 10000;
+export const MAX_DESCRIPTION_LENGTH = 5000;
 export const MAX_TITLE_LENGTH = 50;
-export const MAX_ABOUT_LENGTH = 200;
+export const MAX_ABOUT_LENGTH = 250;
 export const MAX_IMAGES = 5;
+
+export const PAGE_SIZE = 16;
+
+export const SVG_DATA = {
+  xmlns: "http://www.w3.org/2000/svg",
+  width: "100%",
+  height: "100%",
+  shapeRendering: "crispEdges",
+  preserveAspectRatio: "none",
+  viewBox: "0 0 10 6",
+  style: {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transformOrigin: "top left",
+    transform: "translate(-50%, -50%)",
+    right: 0,
+    bottom: 0,
+  },
+};

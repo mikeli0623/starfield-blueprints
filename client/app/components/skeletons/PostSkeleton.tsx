@@ -2,7 +2,7 @@ import Skeleton from "react-loading-skeleton";
 
 const PostSkeleton = () => {
   return (
-    <div className={`card w-full bg-base-100 h-[500px]`}>
+    <div className={`card rounded-t-none w-full bg-base-100 h-[500px]`}>
       <figure className="w-full h-56">
         <Skeleton style={{ height: "250px", width: "420px" }} />
       </figure>

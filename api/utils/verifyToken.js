@@ -1,5 +1,7 @@
-const jwt = require("jsonwebtoken");
-const createError = require("./error");
+import jwt from "jsonwebtoken";
+import { createError } from "./error.js";
+import dotenv from "dotenv";
+dotenv.config();
 
 const verifyToken = (req, res, next) => {
   const token = req.cookies.access_token;
@@ -24,7 +26,4 @@ const verifyAdmin = (req, res, next) => {
   });
 };
 
-module.exports = {
-  verifyToken,
-  verifyAdmin,
-};
+export { verifyToken, verifyAdmin };

@@ -5,6 +5,7 @@ export interface PostResponse {
   description: string;
   about: string;
   title: string;
+  placeholderSVG: string;
   imageKeys: string[];
   videos: string[];
   shipParts: { partName: string; amount: number }[];
@@ -15,6 +16,7 @@ export interface PostResponse {
   username: string;
   _id: string;
   tags: string[];
+  page?: number;
 }
 
 export interface UserResponse {
