@@ -17,7 +17,7 @@ const app = express();
 app.use(
   cors({
     credentials: true,
-    origin: /^http:\/\/localhost:\d+$/,
+    origin: "https://starfieldblueprints.com",
   })
 );
 app.use(cookieParser());

@@ -30,7 +30,7 @@ const register = async (req, res, next) => {
     res
       .cookie("access_token", token, {
         httpOnly: true,
-        domain: "localhost",
+        domain: "starfieldblueprints.com",
         path: "/",
         secure: process.env.NODE_ENV === "production",
       })
@@ -69,7 +69,7 @@ const login = async (req, res, next) => {
     res
       .cookie("access_token", token, {
         httpOnly: true,
-        domain: "localhost",
+        domain: "starfieldblueprints.com",
         path: "/",
         maxAge: expiryTime,
         secure: process.env.NODE_ENV === "production",

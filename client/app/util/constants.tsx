@@ -23,7 +23,7 @@ export const matcher = new RegExpMatcher({
   ...englishRecommendedTransformers,
 });
 
-export const API_URL = "http://localhost:8080/api";
+export const API_URL = "https://api.starfieldblueprints.com/api";
 export const IMG_URL = "https://starfield-blueprints.s3.amazonaws.com/";
 
 export const validImageTypes = [

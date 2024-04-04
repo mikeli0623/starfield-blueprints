@@ -22,9 +22,9 @@ const nextConfig = {
         pathname: "/**",
       },
       {
-        protocol: "http",
-        hostname: "localhost",
-        port: "8080",
+        protocol: "https",
+        hostname: "api.starfieldblueprints.com",
+        port: "",
         pathname: "/**",
       },
     ],
