@@ -250,7 +250,7 @@ const Carousel = ({
                 </div>
                 <div className="p-4 text-white text-xs md:text-sm h-1/3 flex flex-col-reverse">
                   <p className="overflow-hidden w-full text-center">
-                    {hoverProps[activeImageIndex].description}
+                    {hoverProps[activeImageIndex].about}
                   </p>
                 </div>
               </div>

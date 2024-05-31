@@ -232,12 +232,12 @@ const getPosts = async (req, res, next) => {
 
 const getFeatured = async (req, res, next) => {
   try {
-    const timeRange = new Date();
+    // const timeRange = new Date();
     // 7 for week
-    timeRange.setDate(timeRange.getDate() - 99);
+    // timeRange.setDate(timeRange.getDate() - 99);
     const featuredPosts = await Post.find({
       likes: { $gte: 2 },
-      createdAt: { $gte: timeRange },
+      // createdAt: { $gte: timeRange },
     })
       .sort({ likes: -1 })
       .limit(5);

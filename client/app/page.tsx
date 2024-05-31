@@ -15,7 +15,7 @@ export default function Home() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <main className="flex flex-col items-center py-24 lg:px-24 md:px-16 px-8">
+      <main className="flex flex-col items-center py-12 md:py-24 lg:px-24 md:px-16 px-8 gap-8">
         <Featured />
         <Posts />
       </main>

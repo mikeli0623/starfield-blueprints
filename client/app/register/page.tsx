@@ -46,7 +46,7 @@ export default function Register() {
 
     setHasProfanity(matcher.hasMatch(username));
     const sanitizedValue = username.replace(/\s/g, "");
-    if (sanitizedValue.length < MAX_USERNAME_LENGTH) {
+    if (sanitizedValue.length <= MAX_USERNAME_LENGTH) {
       setCredentials((prev) => ({ ...prev, username: sanitizedValue }));
     }
   };
@@ -92,8 +92,8 @@ export default function Register() {
     }
   }, [isSuccess, router]);
 
-  // const [validPassword, setValidPassword] = useState(false);
-  const [validPassword, setValidPassword] = useState(true);
+  const [validPassword, setValidPassword] = useState(false);
+  // const [validPassword, setValidPassword] = useState(true);
 
   const [errorText, setErrorText] = useState("");
 
@@ -102,7 +102,7 @@ export default function Register() {
   }, [errReq]);
 
   return (
-    <main className="flex min-h-screen flex-col items-center py-24 lg:px-24 md:px-16 px-8 gap-2">
+    <main className="flex min-h-screen flex-col items-center py-12 md:py-24 lg:px-24 md:px-16 px-8 gap-2">
       <h1>Register</h1>
       <form
         onSubmit={handleSubmit}
@@ -122,7 +122,6 @@ export default function Register() {
             }`}
             required
           />
-
           <label className="label">
             <span className="label-text-alt">
               {credentials.username.length}/{MAX_USERNAME_LENGTH}
@@ -143,7 +142,7 @@ export default function Register() {
           password={retypedPassword}
           handleChangePassword={handleRetypedPassword}
         />
-        {/* <PasswordChecklist
+        <PasswordChecklist
           onChange={(isValid) => setValidPassword(isValid)}
           rules={["minLength", "specialChar", "number", "capital", "match"]}
           minLength={5}
@@ -152,7 +151,7 @@ export default function Register() {
           messages={{
             specialChar: "Password has a special character.",
           }}
-        /> */}
+        />
         <Button className="submit bg-blue-500 text-white px-4 py-2 hover:bg-blue-700 transition duration-300">
           Register
         </Button>

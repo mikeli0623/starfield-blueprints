@@ -196,7 +196,7 @@ export default function ViewUser({
 
   if (!userRes && userError) {
     return (
-      <main className="flex min-h-screen flex-col items-center py-24 lg:px-24 md:px-16 px-8">
+      <main className="flex min-h-screen flex-col items-center py-12 md:py-24 lg:px-24 md:px-16 px-8">
         User does not exist
       </main>
     );
@@ -205,7 +205,7 @@ export default function ViewUser({
   const data = userRes?.data;
 
   return (
-    <main className="flex min-h-screen flex-col items-center py-24 lg:px-24 md:px-16 px-8 gap-4">
+    <main className="flex min-h-screen flex-col items-center py-12 md:py-24 lg:px-24 md:px-16 px-8 gap-4">
       {isSameUser && (
         <DeleteModal
           type="design"
@@ -320,19 +320,19 @@ export default function ViewUser({
         </div>
       </Collapse>
       {isSameUser && (
-        <Link href={`/users/edit`}>
-          <div className="join">
+        <div className="join">
+          <Link href={`/users/edit`}>
             <Button className="join-item btn-secondary">
               Change Login Info
             </Button>
-            <Button
-              className="join-item btn-primary"
-              handleClick={showDeleteUserModal}
-            >
-              Delete Account
-            </Button>
-          </div>
-        </Link>
+          </Link>
+          <Button
+            className="join-item btn-primary"
+            handleClick={showDeleteUserModal}
+          >
+            Delete Account
+          </Button>
+        </div>
       )}
     </main>
   );

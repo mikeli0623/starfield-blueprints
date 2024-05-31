@@ -99,7 +99,7 @@ export default function ViewDesign({ params }: { params: { postId: string } }) {
 
   if (!res && error)
     return (
-      <main className="flex min-h-screen flex-col items-center py-24 lg:px-24 md:px-16 px-8">
+      <main className="flex min-h-screen flex-col items-center py-12 md:py-24 lg:px-24 md:px-16 px-8">
         <div>Page does not exist</div>
       </main>
     );
@@ -107,40 +107,7 @@ export default function ViewDesign({ params }: { params: { postId: string } }) {
   const data = res?.data;
 
   return (
-    <main className="flex min-h-screen flex-col items-center py-24 lg:px-24 md:px-16 px-8 gap-4">
-      <SubNav>
-        <div></div>
-        <div className="flex gap-2 items-center justify-center">
-          <Button handleClick={() => router.push("#title")} className="m-auto">
-            Title
-          </Button>
-          <Button handleClick={() => router.push("#images")} className="m-auto">
-            Images
-          </Button>
-          <Button handleClick={() => router.push("#about")} className="m-auto">
-            About
-          </Button>
-          {data && data.description && (
-            <Button
-              handleClick={() => router.push("#description")}
-              className="m-auto"
-            >
-              Description
-            </Button>
-          )}
-          {data && data?.videos.length > 0 && (
-            <Button
-              handleClick={() => router.push("#videos")}
-              className="m-auto"
-            >
-              Videos
-            </Button>
-          )}
-          <Button handleClick={() => router.push("#parts")} className="m-auto">
-            Parts
-          </Button>
-        </div>
-      </SubNav>
+    <main className="flex min-h-screen flex-col items-center py-12 md:py-24 lg:px-24 md:px-16 px-8 gap-4">
       <div className="flex items-center flex-col gap-1" id="title">
         <h1>{data?.title || <Skeleton height={24} width={240} />}</h1>
         {data ? (
@@ -228,14 +195,22 @@ export default function ViewDesign({ params }: { params: { postId: string } }) {
           preview
         />
       </div>
-      <h2 id="about">About This Design</h2>
       {data ? (
-        <div className="w-2/3 bg-white shadow rounded-lg p-2">
-          <p className="text-center">{data.about}</p>
-        </div>
+        data.about && (
+          <>
+            <h2 id="about">About This Design</h2>
+            <div className="w-2/3 bg-white shadow rounded-lg p-2">
+              <p className="text-center">{data.about}</p>
+            </div>
+          </>
+        )
       ) : (
-        <Skeleton count={2} width={1000} />
+        <>
+          <h2 id="about">About This Design</h2>
+          <Skeleton count={2} width={1000} />
+        </>
       )}
+
       {data ? (
         data.description && (
           <>
@@ -271,7 +246,7 @@ export default function ViewDesign({ params }: { params: { postId: string } }) {
         </>
       )}
       {data ? (
-        data.shipParts && (
+        data.shipParts.length > 0 && (
           <>
             <h2 id="parts">Ship Parts</h2>
             <FinalPartsTable parts={data.shipParts} />
