@@ -26,7 +26,7 @@ const Featured = () => {
 
   return (
     <div className="w-full h-fit flex flex-col justify-center items-center gap-4">
-      <h1>Designs of the Week</h1>
+      <h1>Featured Designs</h1>
       <Carousel
         size="md"
         autoplay={true}

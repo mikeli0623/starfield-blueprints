@@ -73,23 +73,11 @@ const Posts = () => {
 
   const isVisible = usePageVisibility();
 
-  const [lostVisibility, setLostVisiblity] = useState<boolean>(false);
-
   useEffect(() => {
-    if (!isVisible) {
-      setLostVisiblity(true);
-    }
-    if (isVisible)
-      setTimeout(() => {
-        setLostVisiblity(false);
-      }, 500);
-  }, [isVisible]);
-
-  useEffect(() => {
-    if (inView && isVisible && !lostVisibility) {
+    if (inView && isVisible) {
       fetchNextPage();
     }
-  }, [fetchNextPage, inView, isVisible, lostVisibility]);
+  }, [fetchNextPage, inView, isVisible]);
 
   const handleSearchChange = (value: string | number) => {
     setSearch(String(value));
@@ -170,7 +158,7 @@ const Posts = () => {
                   </button>
                 </motion.div>
               )}
-              {isFetching && !isFetchingNextPage
+              {isFetching && !isFetchingNextPage && inView
                 ? Array(4)
                     .fill(null)
                     .map((_, i) => (

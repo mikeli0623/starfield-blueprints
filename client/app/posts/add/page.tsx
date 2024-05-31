@@ -587,7 +587,7 @@ export default function AddDesign() {
 
   return (
     <main
-      className="flex min-h-screen flex-col items-center py-24 lg:px-24 md:px-16 px-8 gap-4 outline-none"
+      className="flex min-h-screen flex-col items-center py-12 md:py-24 lg:px-24 md:px-16 px-8 gap-4 outline-none"
       {...getRootProps()}
     >
       <ImageModal editor={editor} />
@@ -687,7 +687,6 @@ export default function AddDesign() {
               aboutProfanity ? "textarea-error" : ""
             }`}
             placeholder="This ship is awesome!"
-            required
           />
           <label className="label text-sm text-gray-500">
             <span className="label-text-alt">
