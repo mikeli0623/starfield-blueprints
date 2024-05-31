@@ -29,7 +29,7 @@ const PostCard = ({
 
   return (
     <div
-      className={`card w-full h-auto bg-base-100 rounded-t-none ${
+      className={`card w-full h-auto bg-base-100 rounded-t-none hover:brightness-[0.85] transition-all ${
         !minimal ? "aspect-[4/5]" : "aspect-[10/11]"
       }`}
     >

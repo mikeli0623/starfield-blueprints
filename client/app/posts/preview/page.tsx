@@ -134,7 +134,7 @@ export default function PreviewDesign() {
   }, [editor, post]);
 
   return (
-    <main className="flex min-h-screen flex-col items-center py-24 lg:px-24 md:px-16 px-8 gap-4">
+    <main className="flex min-h-screen flex-col items-center py-12 md:py-24 lg:px-24 md:px-16 px-8 gap-4">
       <SubNav>
         <Button className="btn-secondary m-auto" handleClick={handleBack}>
           Back
@@ -192,30 +192,36 @@ export default function PreviewDesign() {
               {post.about || "No about"}
             </p>
           </div>
-          <h2>Description</h2>
-          <div className="w-3/4">
-            <Editor editable={false} editor={editor} />
-          </div>
-          <h2>Videos</h2>
-          <div className="flex gap-4 w-full overflow-auto">
-            {post.videos.length > 0 ? (
-              <>
+          {post.description && (
+            <>
+              <h2>Description</h2>
+              <div className="w-3/4">
+                <Editor editable={false} editor={editor} />
+              </div>
+            </>
+          )}
+          {post.videos.length > 0 && (
+            <>
+              <h2>Videos</h2>
+              <div className="flex gap-4 w-full overflow-auto">
                 {post.videos.map((video, i) => (
                   <div key={video + i} className="m-auto">
                     <YoutubeEmbed src={video} />
                   </div>
                 ))}
-              </>
-            ) : (
-              <p className="m-auto">No videos</p>
-            )}
-          </div>
-          <h2>Ship Parts</h2>
-          <FinalPartsTable
-            parts={post.shipParts.map((part) => {
-              return { partName: part.part.partName, amount: part.amount };
-            })}
-          />
+              </div>
+            </>
+          )}
+          {post.shipParts.length > 0 && (
+            <>
+              <h2>Ship Parts</h2>
+              <FinalPartsTable
+                parts={post.shipParts.map((part) => {
+                  return { partName: part.part.partName, amount: part.amount };
+                })}
+              />
+            </>
+          )}
         </div>
       )}
       {view === "card" && (

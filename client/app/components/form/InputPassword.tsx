@@ -7,6 +7,7 @@ import Image from "next/image";
 interface Props {
   password: string;
   type: string;
+  newPassword?: boolean;
   key?: number;
   handleChangePassword: React.ChangeEventHandler<HTMLInputElement>;
 }
@@ -14,6 +15,7 @@ interface Props {
 const InputPassword = ({
   type,
   password,
+  newPassword = false,
   key = 0,
   handleChangePassword,
 }: Props) => {
@@ -32,7 +34,7 @@ const InputPassword = ({
           onChange={handleChangePassword}
           className="input input-bordered join-item"
           required
-          autoComplete="new-password"
+          autoComplete={newPassword ? "new-password" : "current-password"}
         />
         <Button
           className={`join-item btn-outline swap swap-flip ${

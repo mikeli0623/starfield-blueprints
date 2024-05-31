@@ -56,31 +56,10 @@ const Nav = () => {
     router.push("/");
   };
 
-  const [hide, setHide] = useState<boolean>(false);
-
   return (
-    <nav className="w-full bg-neutral flex items-center justify-end fixed z-50 px-4 py-2">
-      <Button className="btn-circle" handleClick={() => setHide(!hide)}>
-        <label className={`swap swap-rotate ${!hide ? "swap-active" : ""}`}>
-          <Image
-            src={collapseOpen}
-            width={30}
-            height={30}
-            alt="open"
-            className="swap-on"
-          />
-          <Image
-            src={collapseClose}
-            width={30}
-            height={30}
-            alt="close"
-            className="swap-off"
-            draggable={false}
-          />
-        </label>
-      </Button>
-      <Link href="/">
-        <Button className="btn-circle">
+    <nav className="w-full bg-neutral flex items-center justify-between fixed z-50 px-2 md:px-4 py-1 md:py-2 gap-2">
+      <Link href="/" className="w-full flex justify-start">
+        <Button className="btn-circle hidden xl:inline-flex">
           <Image
             src={homeIcon}
             alt="Home"
@@ -89,45 +68,97 @@ const Nav = () => {
             draggable={false}
           />
         </Button>
+        <Button className="btn-circle btn-sm hidden md:inline-flex xl:hidden">
+          <Image
+            src={homeIcon}
+            alt="Home"
+            width={18}
+            height={18}
+            draggable={false}
+          />
+        </Button>
+        <Button className="btn-circle btn-xs inline-flex md:hidden">
+          <Image
+            src={homeIcon}
+            alt="Home"
+            width={14}
+            height={14}
+            draggable={false}
+          />
+        </Button>
       </Link>
-      {!userState.loggedIn && (
-        <Link href="/log_in">
-          <Button className="btn-primary">Log In</Button>
-        </Link>
-      )}
-      {!userState.loggedIn && (
-        <Link href="/register">
-          <Button className="btn-secondary">Register</Button>
-        </Link>
-      )}
-      {userState.loggedIn && (
-        <Link href="/">
-          <Button className="btn-primary" handleClick={handleLogout}>
-            Log Out
-          </Button>
-        </Link>
-      )}
-      {userState.loggedIn && (
-        <Link href="/posts/add">
-          <Button className="btn-accent">Upload</Button>
-        </Link>
-      )}
-      {userState.loggedIn && state.user && (
-        <p className="text-white">{userState.username}</p>
-      )}
-      {userState.loggedIn && (
-        <Link href={`/users/view/${userState.userId}/${userState.iv}`}>
-          <Button className="btn-circle">
-            <Image
-              src={userIcon}
-              alt="User placeholder"
-              width={35}
-              height={35}
-              draggable={false}
-            />
-          </Button>
-        </Link>
-      )}
+      <h1 className="text-sm lg:text-2xl 2xl:text-4xl text-white w-full text-center">
+        Starfield Blueprints
+      </h1>
+      <div className="flex items-center justify-end gap-2 w-full">
+        {!userState.loggedIn && (
+          <Link href="/log_in">
+            <Button className="btn-primary btn-xs md:btn-sm md:text-[10px] xl:btn-md text-[8px] xl:text-sm">
+              Log In
+            </Button>
+          </Link>
+        )}
+        {!userState.loggedIn && (
+          <Link href="/register">
+            <Button className="btn-secondary btn-xs md:btn-sm md:text-[10px] xl:btn-md text-[8px] xl:text-sm">
+              Register
+            </Button>
+          </Link>
+        )}
+        {userState.loggedIn && (
+          <Link href="/">
+            <Button
+              className="btn-primary btn-xs md:btn-sm md:text-[10px] xl:btn-md text-[8px] xl:text-sm"
+              handleClick={handleLogout}
+            >
+              Log Out
+            </Button>
+          </Link>
+        )}
+        {userState.loggedIn && (
+          <Link href="/posts/add">
+            <Button className="btn-accent btn-xs md:btn-sm md:text-[10px] xl:btn-md text-[8px] xl:text-sm">
+              Upload
+            </Button>
+          </Link>
+        )}
+        {userState.loggedIn && (
+          <Link href={`/users/view/${userState.userId}/${userState.iv}`}>
+            <Button className="btn-circle hidden xl:inline-flex">
+              <Image
+                src={userIcon}
+                alt="User placeholder"
+                width={35}
+                height={35}
+                draggable={false}
+              />
+            </Button>
+            <Button className="btn-circle btn-sm hidden md:inline-flex xl:hidden">
+              <Image
+                src={userIcon}
+                alt="User placeholder"
+                width={22}
+                height={22}
+                draggable={false}
+              />
+            </Button>
+            <Button className="btn-circle btn-xs inline-flex md:hidden">
+              <Image
+                src={userIcon}
+                alt="User placeholder"
+                width={16}
+                height={16}
+                draggable={false}
+              />
+            </Button>
+          </Link>
+        )}
+        {userState.loggedIn && state.user && (
+          <p className="text-white truncate hidden sm:block text-xs lg:text-base">
+            {userState.username}
+          </p>
+        )}
+      </div>
     </nav>
   );
 };

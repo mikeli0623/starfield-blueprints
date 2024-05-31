@@ -777,7 +777,7 @@ export default function EditDesign({ params }: { params: { postId: string } }) {
 
   if (!checkRes || checkLoading) {
     return (
-      <main className="flex min-h-screen flex-col items-center py-24 lg:px-24 md:px-16 px-8 gap-2">
+      <main className="flex min-h-screen flex-col items-center py-12 md:py-24 lg:px-24 md:px-16 px-8 gap-2">
         <span className="loading loading-ring loading-lg" />
       </main>
     );
@@ -785,7 +785,7 @@ export default function EditDesign({ params }: { params: { postId: string } }) {
 
   if (checkRes && !checkLoading && !checkRes.data) {
     return (
-      <main className="flex min-h-screen flex-col items-center py-24 lg:px-24 md:px-16 px-8 gap-2">
+      <main className="flex min-h-screen flex-col items-center py-12 md:py-24 lg:px-24 md:px-16 px-8 gap-2">
         Not authorized
       </main>
     );
@@ -793,7 +793,7 @@ export default function EditDesign({ params }: { params: { postId: string } }) {
 
   return (
     <main
-      className="flex min-h-screen flex-col items-center py-24 lg:px-24 md:px-16 px-8 gap-2"
+      className="flex min-h-screen flex-col items-center py-12 md:py-24 lg:px-24 md:px-16 px-8 gap-2"
       {...getRootProps()}
     >
       <LinkModal
@@ -867,7 +867,6 @@ export default function EditDesign({ params }: { params: { postId: string } }) {
               aboutProfanity ? "input-error" : ""
             }`}
             placeholder=""
-            required
           />
           <label className="label text-sm text-gray-500">
             <span className="label-text-alt">
